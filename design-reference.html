@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  [data-noscroll]{-ms-overflow-style:none;scrollbar-width:none}
+  [data-noscroll]::-webkit-scrollbar{display:none;width:0;height:0}
+  @keyframes pocketpop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 24px;background:radial-gradient(120% 120% at 20% 0%,#f0f4ea 0%,#e4efe6 55%,#dcece4 100%);font-family:Nunito,system-ui,sans-serif">
+  <div style="width:414px;height:868px;background:#14261d;border-radius:56px;padding:12px;box-shadow:0 50px 100px -30px rgba(20,52,36,.55),0 12px 30px rgba(0,0,0,.14);position:relative">
+    <div style="width:100%;height:100%;background:#f6f4ef;border-radius:44px;overflow:hidden;position:relative">
+
+      <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:130px;height:30px;background:#14261d;border-radius:0 0 18px 18px;z-index:20"></div>
+
+      <div style="position:absolute;top:0;left:0;right:0;height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 7px;font:800 14px Nunito;color:#1d241f;z-index:10">
+        <div>9:41</div>
+        <div style="display:flex;gap:7px;align-items:center;font-size:15px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-full"></i></div>
+      </div>
+
+      <div data-noscroll style="position:absolute;top:52px;left:0;right:0;bottom:0;overflow-y:auto;padding:8px 20px 108px">
+
+        <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+          <div data-screen-label="Home" style="animation:pocketpop .32s ease">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 2px 18px">
+              <div>
+                <div style="font:700 13px Nunito;color:#9aa79c">Good morning</div>
+                <div style="font:800 22px Nunito;color:#1d241f">Hey, {{ userName }}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <button style="width:42px;height:42px;border-radius:14px;border:1px solid #eceae4;background:#fff;color:#4a554d;display:flex;align-items:center;justify-content:center;font-size:19px;cursor:pointer"><i class="ph ph-bell"></i></button>
+                <div style="width:42px;height:42px;border-radius:14px;background:#e8f5ec;color:#17784a;display:flex;align-items:center;justify-content:center;font:800 16px Nunito">{{ initial }}</div>
+              </div>
+            </div>
+
+            <div style="border-radius:28px;padding:22px 22px 20px;background:linear-gradient(140deg,#22a860 0%,#158a4c 55%,#0f7a43 100%);color:#fff;box-shadow:0 20px 38px -16px rgba(21,138,76,.65);position:relative;overflow:hidden">
+              <div style="position:absolute;top:-40px;right:-30px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.10)"></div>
+              <div style="position:absolute;bottom:-60px;right:20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.07)"></div>
+              <div style="font:700 13px Nunito;opacity:.9;display:flex;align-items:center;gap:6px"><i class="ph ph-wallet"></i>Total balance</div>
+              <div style="font:900 40px Nunito;margin-top:6px;letter-spacing:-.5px">{{ balanceStr }}</div>
+              <div style="display:flex;gap:10px;margin-top:18px">
+                <div style="flex:1;background:rgba(255,255,255,.16);border-radius:16px;padding:11px 13px">
+                  <div style="display:flex;align-items:center;gap:6px;font:700 11px Nunito;opacity:.9"><i class="ph-fill ph-arrow-circle-down"></i>In this week</div>
+                  <div style="font:800 17px Nunito;margin-top:3px">{{ weekInStr }}</div>
+                </div>
+                <div style="flex:1;background:rgba(255,255,255,.16);border-radius:16px;padding:11px 13px">
+                  <div style="display:flex;align-items:center;gap:6px;font:700 11px Nunito;opacity:.9"><i class="ph-fill ph-arrow-circle-up"></i>Out this week</div>
+                  <div style="font:800 17px Nunito;margin-top:3px">{{ weekOutStr }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:14px;background:#fff;border:1px solid #efeee9;border-radius:22px;padding:15px 16px;display:flex;align-items:center;gap:14px">
+              <div style="width:46px;height:46px;border-radius:15px;background:#e8f5ec;color:#17784a;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none"><i class="ph-fill ph-coins"></i></div>
+              <div style="flex:1">
+                <div style="font:700 12px Nunito;color:#9aa79c">Safe to spend today</div>
+                <div style="font:800 21px Nunito;color:{{ safeColor }}">{{ safeStr }}</div>
+              </div>
+              <div style="text-align:right"><div style="font:700 11px Nunito;color:#9aa79c">daily budget</div><div style="font:800 14px Nunito;color:#1d241f">{{ dailyBudgetStr }}</div></div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin:24px 4px 12px">
+              <div style="font:800 16px Nunito;color:#1d241f">Recent activity</div>
+              <div style="font:700 12px Nunito;color:#1f9d5a">See all</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <sc-for list="{{ recentTx }}" as="t" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:12px 14px;border:1px solid #efeee9">
+                  <div style="width:42px;height:42px;border-radius:13px;background:#f0f3ee;color:#3f7a58;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none"><i class="ph {{ t.iconClass }}"></i></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font:700 14px Nunito;color:#1d241f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.reason }}</div>
+                    <div style="font:600 12px Nunito;color:#9aa79c">{{ t.category }} · {{ t.dateStr }}</div>
+                  </div>
+                  <sc-if value="{{ t.isOut }}" hint-placeholder-val="{{ true }}"><div style="font:800 15px Nunito;color:#e0674f">-{{ t.amountStr }}</div></sc-if>
+                  <sc-if value="{{ t.isIn }}" hint-placeholder-val="{{ true }}"><div style="font:800 15px Nunito;color:#1f9d5a">+{{ t.amountStr }}</div></sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAdd }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Add" style="animation:pocketpop .32s ease">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 2px 16px">
+              <div style="font:800 21px Nunito;color:#1d241f">Add transaction</div>
+              <button onClick="{{ goHome }}" style="width:38px;height:38px;border-radius:12px;border:1px solid #eceae4;background:#fff;color:#4a554d;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer"><i class="ph ph-x"></i></button>
+            </div>
+
+            <div style="display:flex;gap:6px;background:#eceae4;border-radius:16px;padding:5px">
+              <button onClick="{{ typeExpense }}" style="{{ expBtnStyle }}"><i class="ph ph-arrow-down-left"></i>Expense</button>
+              <button onClick="{{ typeIncome }}" style="{{ incBtnStyle }}"><i class="ph ph-arrow-up-right"></i>Income</button>
+            </div>
+
+            <div style="text-align:center;margin:22px 0 16px">
+              <div style="font:900 46px Nunito;color:{{ addAmountColor }};letter-spacing:-1px">{{ addSign }}{{ addAmount }} <span style="font-size:20px;color:#9aa79c;font-weight:800">DH</span></div>
+              <div style="font:700 12px Nunito;color:#9aa79c;margin-top:2px">Today · {{ todayNice }}</div>
+            </div>
+
+            <div data-noscroll style="display:flex;gap:10px;overflow-x:auto;padding:2px 2px 6px">
+              <sc-for list="{{ catChips }}" as="c" hint-placeholder-count="6">
+                <button onClick="{{ c.onSelect }}" style="{{ c.chipStyle }}"><i class="ph {{ c.iconClass }}" style="font-size:21px"></i><span>{{ c.label }}</span></button>
+              </sc-for>
+            </div>
+
+            <div style="margin-top:12px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #efeee9;border-radius:16px;padding:0 14px;height:50px">
+              <i class="ph ph-note-pencil" style="color:#9aa79c;font-size:19px"></i>
+              <input value="{{ addReason }}" onChange="{{ onReason }}" placeholder="What was it for?" style="border:none;outline:none;flex:1;font:600 14px Nunito;color:#1d241f;background:transparent"/>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+              <sc-for list="{{ keypad }}" as="k" hint-placeholder-count="12">
+                <button onClick="{{ k.onPress }}" style="height:50px;background:#fff;border:1px solid #efeee9;border-radius:15px;font:800 21px Nunito;color:#1d241f;cursor:pointer;display:flex;align-items:center;justify-content:center">{{ k.label }}</button>
+              </sc-for>
+            </div>
+
+            <button onClick="{{ saveTx }}" style="margin-top:12px;width:100%;height:54px;border:none;border-radius:18px;background:linear-gradient(135deg,#22a860,#158a4c);color:#fff;font:800 16px Nunito;cursor:pointer;box-shadow:0 14px 24px -10px rgba(21,138,76,.65);display:flex;align-items:center;justify-content:center;gap:8px"><i class="ph ph-check-circle" style="font-size:20px"></i>Save transaction</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isDaily }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Daily" style="animation:pocketpop .32s ease">
+            <div style="margin:6px 2px 4px;font:800 21px Nunito;color:#1d241f">Daily check</div>
+            <div style="margin:0 2px 14px;font:700 13px Nunito;color:#9aa79c">Today · {{ todayNice }}</div>
+
+            <div style="display:flex;justify-content:center;margin:6px 0 2px">
+              <div style="width:196px;height:196px;border-radius:50%;background:conic-gradient(#1f9d5a {{ dailyPct }}%, #e6ece5 {{ dailyPct }}%);display:flex;align-items:center;justify-content:center">
+                <div style="width:150px;height:150px;border-radius:50%;background:#f6f4ef;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+                  <div style="font:700 12px Nunito;color:#9aa79c">Spent today</div>
+                  <div style="font:900 30px Nunito;color:#1d241f;letter-spacing:-.5px">{{ todaySpentStr }}</div>
+                  <div style="font:700 12px Nunito;color:#9aa79c">of {{ dailyBudgetStr }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:center;margin:8px 0 2px">
+              <div style="display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:22px;background:{{ dailyStatusBg }};color:{{ dailyStatusColor }};font:800 13px Nunito"><i class="ph-fill {{ dailyStatusIcon }}"></i>{{ dailyStatus }}</div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #efeee9;border-radius:20px;padding:16px;margin-top:14px">
+              <div style="font:700 13px Nunito;color:#1d241f">How did today feel?</div>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <sc-for list="{{ moods }}" as="m" hint-placeholder-count="3">
+                  <button onClick="{{ m.onPick }}" style="{{ m.style }}"><i class="ph-fill {{ m.icon }}" style="font-size:20px"></i>{{ m.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="margin:22px 4px 12px;font:800 15px Nunito;color:#1d241f">Today's spending</div>
+            <sc-if value="{{ hasTodayTx }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ todayTx }}" as="t" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:12px 14px;border:1px solid #efeee9">
+                    <div style="width:42px;height:42px;border-radius:13px;background:#f0f3ee;color:#3f7a58;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none"><i class="ph {{ t.iconClass }}"></i></div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font:700 14px Nunito;color:#1d241f">{{ t.reason }}</div>
+                      <div style="font:600 12px Nunito;color:#9aa79c">{{ t.category }}</div>
+                    </div>
+                    <sc-if value="{{ t.isOut }}" hint-placeholder-val="{{ true }}"><div style="font:800 15px Nunito;color:#e0674f">-{{ t.amountStr }}</div></sc-if>
+                    <sc-if value="{{ t.isIn }}" hint-placeholder-val="{{ false }}"><div style="font:800 15px Nunito;color:#1f9d5a">+{{ t.amountStr }}</div></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noTodayTx }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff;border:1px dashed #d8ddd4;border-radius:20px;padding:26px;text-align:center;color:#9aa79c"><i class="ph ph-confetti" style="font-size:30px"></i><div style="font:700 13px Nunito;margin-top:8px">No spending yet today</div></div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isWeekly }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Weekly" style="animation:pocketpop .32s ease">
+            <div style="margin:6px 2px 4px;font:800 21px Nunito;color:#1d241f">Weekly check</div>
+            <div style="margin:0 2px 14px;font:700 13px Nunito;color:#9aa79c">{{ weekRange }}</div>
+
+            <div style="background:#fff;border:1px solid #efeee9;border-radius:24px;padding:18px">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between">
+                <div>
+                  <div style="font:700 13px Nunito;color:#9aa79c">Spent this week</div>
+                  <div style="font:900 33px Nunito;color:#1d241f;letter-spacing:-.5px;margin-top:2px">{{ weekOutStr }}</div>
+                </div>
+                <div style="display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:16px;background:{{ deltaBg }};color:{{ deltaColor }};font:800 12px Nunito"><i class="ph-bold {{ deltaIcon }}"></i>{{ deltaPct }}% {{ deltaLabel }}</div>
+              </div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:7px;height:140px;margin-top:18px">
+                <sc-for list="{{ weekDays }}" as="d" hint-placeholder-count="7">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end">
+                    <div style="width:100%;max-width:26px;height:{{ d.h }}px;border-radius:8px 8px 5px 5px;background:{{ d.color }}"></div>
+                    <div style="font:800 11px Nunito;color:{{ d.labelColor }}">{{ d.label }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:12px;margin-top:14px">
+              <div style="flex:1;background:#fff;border:1px solid #efeee9;border-radius:20px;padding:15px">
+                <div style="display:flex;align-items:center;gap:6px;font:700 12px Nunito;color:#1f9d5a"><i class="ph-fill ph-arrow-circle-down"></i>Income</div>
+                <div style="font:800 20px Nunito;color:#1d241f;margin-top:4px">{{ weekInStr }}</div>
+              </div>
+              <div style="flex:1;background:#fff;border:1px solid #efeee9;border-radius:20px;padding:15px">
+                <div style="display:flex;align-items:center;gap:6px;font:700 12px Nunito;color:#e0674f"><i class="ph-fill ph-arrow-circle-up"></i>Spending</div>
+                <div style="font:800 20px Nunito;color:#1d241f;margin-top:4px">{{ weekOutStr }}</div>
+              </div>
+            </div>
+
+            <div style="margin:22px 4px 12px;font:800 15px Nunito;color:#1d241f">Top categories</div>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <sc-for list="{{ topCats }}" as="c" hint-placeholder-count="4">
+                <div style="background:#fff;border:1px solid #efeee9;border-radius:18px;padding:13px 14px">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <div style="width:38px;height:38px;border-radius:12px;background:#f0f3ee;color:#3f7a58;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none"><i class="ph {{ c.iconClass }}"></i></div>
+                    <div style="flex:1;font:700 14px Nunito;color:#1d241f">{{ c.label }}</div>
+                    <div style="font:800 14px Nunito;color:#1d241f">{{ c.amountStr }}</div>
+                  </div>
+                  <div style="height:7px;border-radius:4px;background:#eef1ea;margin-top:10px;overflow:hidden"><div style="height:100%;border-radius:4px;background:#1f9d5a;width:{{ c.pct }}%"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isDebt }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Budget" style="animation:pocketpop .32s ease">
+            <div style="margin:6px 2px 14px;font:800 21px Nunito;color:#1d241f">Budget &amp; Debt</div>
+
+            <div style="border-radius:26px;padding:22px;background:linear-gradient(140deg,#22a860 0%,#158a4c 60%,#0f7a43 100%);color:#fff;box-shadow:0 20px 36px -16px rgba(21,138,76,.6);position:relative;overflow:hidden">
+              <div style="position:absolute;top:-40px;right:-30px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.10)"></div>
+              <div style="font:700 13px Nunito;opacity:.9">You can spend this month</div>
+              <div style="font:900 38px Nunito;margin-top:4px;letter-spacing:-.5px">{{ monthlyAvailableStr }}</div>
+              <div style="display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:rgba(255,255,255,.18);border-radius:16px;padding:9px 14px;font:800 14px Nunito"><i class="ph-fill ph-sun-horizon"></i>{{ dailyBudgetStr }} <span style="opacity:.8;font-weight:700">/ day</span></div>
+              <div style="font:600 11.5px Nunito;opacity:.85;margin-top:14px;line-height:1.5">Salary − bills − debt − savings, spread over 31 days.</div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #efeee9;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-top:14px">
+              <div style="width:44px;height:44px;border-radius:14px;background:#e8f5ec;color:#17784a;display:flex;align-items:center;justify-content:center;font-size:21px;flex:none"><i class="ph-fill ph-bank"></i></div>
+              <div style="flex:1"><div style="font:700 12px Nunito;color:#9aa79c">Monthly salary</div><div style="font:800 20px Nunito;color:#1d241f">{{ salaryStr }}</div></div>
+              <div style="display:flex;gap:8px"><button onClick="{{ salaryMinus }}" style="width:34px;height:34px;border-radius:11px;border:1px solid #eceae4;background:#f6f4ef;color:#4a554d;font-size:16px;cursor:pointer"><i class="ph-bold ph-minus"></i></button><button onClick="{{ salaryPlus }}" style="width:34px;height:34px;border-radius:11px;border:none;background:#1f9d5a;color:#fff;font-size:16px;cursor:pointer"><i class="ph-bold ph-plus"></i></button></div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #efeee9;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-top:12px">
+              <div style="width:44px;height:44px;border-radius:14px;background:#eef4fb;color:#2f6fb0;display:flex;align-items:center;justify-content:center;font-size:21px;flex:none"><i class="ph-fill ph-piggy-bank"></i></div>
+              <div style="flex:1"><div style="font:700 12px Nunito;color:#9aa79c">Savings goal</div><div style="font:800 20px Nunito;color:#1d241f">{{ savingsStr }}</div></div>
+              <div style="display:flex;gap:8px"><button onClick="{{ savingsMinus }}" style="width:34px;height:34px;border-radius:11px;border:1px solid #eceae4;background:#f6f4ef;color:#4a554d;font-size:16px;cursor:pointer"><i class="ph-bold ph-minus"></i></button><button onClick="{{ savingsPlus }}" style="width:34px;height:34px;border-radius:11px;border:none;background:#1f9d5a;color:#fff;font-size:16px;cursor:pointer"><i class="ph-bold ph-plus"></i></button></div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #efeee9;border-radius:20px;padding:16px;margin-top:12px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="font:700 13px Nunito;color:#1d241f">Fixed bills</div><div style="font:800 16px Nunito;color:#1d241f">{{ totalBillsStr }}</div></div>
+              <div style="display:flex;flex-direction:column;gap:9px;margin-top:12px">
+                <sc-for list="{{ billsList }}" as="b" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div style="display:flex;align-items:center;gap:9px;font:600 13px Nunito;color:#4a554d"><i class="ph {{ b.iconClass }}" style="color:#9aa79c;font-size:16px"></i>{{ b.name }}</div>
+                    <div style="font:700 13px Nunito;color:#1d241f">{{ b.amountStr }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="margin:22px 4px 12px;font:800 15px Nunito;color:#1d241f">Your debts</div>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <sc-for list="{{ debtsList }}" as="d" hint-placeholder-count="2">
+                <div style="background:#fff;border:1px solid #efeee9;border-radius:20px;padding:15px 16px">
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <div style="width:44px;height:44px;border-radius:14px;background:#fbecec;color:#c85a45;display:flex;align-items:center;justify-content:center;font-size:21px;flex:none"><i class="ph-fill {{ d.iconClass }}"></i></div>
+                    <div style="flex:1"><div style="font:800 15px Nunito;color:#1d241f">{{ d.name }}</div><div style="font:600 12px Nunito;color:#9aa79c">Remaining {{ d.totalStr }}</div></div>
+                    <div style="text-align:right"><div style="font:800 15px Nunito;color:#e0674f">{{ d.monthlyStr }}</div><div style="font:600 11px Nunito;color:#9aa79c">/ month</div></div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid #f1f0eb;font:700 12px Nunito;color:#6b7670"><i class="ph ph-calendar-dots" style="font-size:15px"></i>{{ d.months }} months left</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;height:86px;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-top:1px solid #eceae4;display:flex;align-items:center;justify-content:space-around;padding:0 16px 18px;z-index:15">
+        <button onClick="{{ goHome }}" style="background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:{{ navHome }};font:800 10px Nunito"><i class="{{ homeI }}" style="font-size:23px"></i>Home</button>
+        <button onClick="{{ goDaily }}" style="background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:{{ navDaily }};font:800 10px Nunito"><i class="{{ dailyI }}" style="font-size:23px"></i>Daily</button>
+        <button onClick="{{ goAdd }}" style="width:58px;height:58px;border-radius:20px;background:linear-gradient(135deg,#22a860,#158a4c);border:none;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 22px -6px rgba(21,138,76,.6);transform:translateY(-16px);cursor:pointer"><i class="ph-bold ph-plus" style="font-size:26px"></i></button>
+        <button onClick="{{ goWeekly }}" style="background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:{{ navWeekly }};font:800 10px Nunito"><i class="{{ weeklyI }}" style="font-size:23px"></i>Weekly</button>
+        <button onClick="{{ goDebt }}" style="background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:{{ navDebt }};font:800 10px Nunito"><i class="{{ debtI }}" style="font-size:23px"></i>Budget</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:520,&quot;height&quot;:940},&quot;userName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Yassine&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;startBalance&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:3200,&quot;min&quot;:0,&quot;max&quot;:50000,&quot;step&quot;:100,&quot;unit&quot;:&quot;DH&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;privacyMode&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Behavior&quot;}}">
+class Component extends DCLogic {
+  CATS = {
+    food:{label:'Food',icon:'fork-knife'},
+    transport:{label:'Transport',icon:'bus'},
+    shopping:{label:'Shopping',icon:'shopping-bag'},
+    bills:{label:'Bills',icon:'receipt'},
+    fun:{label:'Fun',icon:'game-controller'},
+    health:{label:'Health',icon:'heartbeat'},
+    salary:{label:'Salary',icon:'bank'},
+    freelance:{label:'Freelance',icon:'laptop'},
+    gift:{label:'Gift',icon:'gift'},
+  };
+  today = '2026-07-01';
+  expenseCats = ['food','transport','shopping','bills','fun','health'];
+  incomeCats = ['salary','freelance','gift'];
+  bills = [
+    {name:'Rent',amount:2500,icon:'ph-house'},
+    {name:'Utilities',amount:400,icon:'ph-lightning'},
+    {name:'Internet',amount:200,icon:'ph-wifi-high'},
+    {name:'Phone',amount:150,icon:'ph-device-mobile'},
+  ];
+  debts = [
+    {name:'Car loan',total:24000,monthly:1200,icon:'ph-car'},
+    {name:'Credit card',total:6000,monthly:800,icon:'ph-credit-card'},
+  ];
+  state = {
+    tab:'home',
+    transactions:[
+      {id:1,type:'out',amount:45,cat:'food',reason:'Lunch at cafe',date:'2026-07-01'},
+      {id:2,type:'out',amount:20,cat:'transport',reason:'Taxi ride',date:'2026-07-01'},
+      {id:3,type:'out',amount:120,cat:'shopping',reason:'Groceries',date:'2026-06-30'},
+      {id:4,type:'in',amount:8000,cat:'salary',reason:'July salary',date:'2026-06-30'},
+      {id:5,type:'out',amount:60,cat:'fun',reason:'Cinema night',date:'2026-06-29'},
+      {id:6,type:'out',amount:35,cat:'food',reason:'Dinner out',date:'2026-06-28'},
+      {id:7,type:'out',amount:200,cat:'bills',reason:'Internet bill',date:'2026-06-27'},
+      {id:8,type:'out',amount:15,cat:'transport',reason:'Bus card',date:'2026-06-26'},
+      {id:9,type:'out',amount:90,cat:'health',reason:'Pharmacy',date:'2026-06-25'},
+      {id:10,type:'out',amount:80,cat:'food',reason:'Groceries',date:'2026-06-22'},
+      {id:11,type:'out',amount:150,cat:'shopping',reason:'New shoes',date:'2026-06-20'},
+      {id:12,type:'out',amount:40,cat:'transport',reason:'Fuel',date:'2026-06-19'},
+    ],
+    start:3200,
+    addType:'out', addAmount:'0', addCat:'food', addReason:'',
+    mood:null,
+    salary:8000, savings:1000,
+  };
+
+  fmt(n){ const v=Math.round(Math.abs(n)); return v.toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ')+' DH'; }
+  dstr(off){ const t=new Date(this.today+'T00:00:00'); t.setDate(t.getDate()-off); return t.toISOString().slice(0,10); }
+  nice(d){ return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+  fdate(d){ if(d===this.today) return 'Today'; if(d===this.dstr(1)) return 'Yesterday'; return this.nice(d); }
+  mapTx(t){ const c=this.CATS[t.cat]||{label:t.cat,icon:'circle'}; return {id:t.id,iconClass:'ph-'+c.icon,category:c.label,reason:t.reason,dateStr:this.fdate(t.date),amountStr:this.fmt(t.amount),isOut:t.type==='out',isIn:t.type==='in'}; }
+
+  goHome=()=>this.setState({tab:'home'});
+  goDaily=()=>this.setState({tab:'daily'});
+  goWeekly=()=>this.setState({tab:'weekly'});
+  goDebt=()=>this.setState({tab:'debt'});
+  goAdd=()=>this.setState({tab:'add'});
+  typeExpense=()=>this.setState({addType:'out',addCat:'food'});
+  typeIncome=()=>this.setState({addType:'in',addCat:'salary'});
+  onReason=(e)=>this.setState({addReason:e.target.value});
+  press=(d)=>()=>{ let a=this.state.addAmount; if(d==='.'){ if(a.includes('.'))return; a=a+'.'; } else if(a==='0'){ a=d; } else { if(a.replace('.','').length>=7)return; a=a+d; } this.setState({addAmount:a}); };
+  back=()=>{ let a=this.state.addAmount.slice(0,-1); if(a===''||a==='-')a='0'; this.setState({addAmount:a}); };
+  saveTx=()=>{ const amt=parseFloat(this.state.addAmount)||0; if(amt<=0){ this.setState({tab:'home'}); return; } const tx={id:Date.now(),type:this.state.addType,amount:amt,cat:this.state.addCat,reason:this.state.addReason||this.CATS[this.state.addCat].label,date:this.today}; this.setState(s=>({transactions:[tx,...s.transactions],addAmount:'0',addReason:'',tab:'home'})); };
+  salaryMinus=()=>this.setState(s=>({salary:Math.max(0,s.salary-500)}));
+  salaryPlus=()=>this.setState(s=>({salary:s.salary+500}));
+  savingsMinus=()=>this.setState(s=>({savings:Math.max(0,s.savings-100)}));
+  savingsPlus=()=>this.setState(s=>({savings:s.savings+100}));
+  pickMood=(m)=>()=>this.setState({mood:m});
+
+  renderVals(){
+    const s=this.state;
+    const txs=s.transactions;
+    const name=this.props.userName || 'Yassine';
+    const inSum=txs.filter(t=>t.type==='in').reduce((a,b)=>a+b.amount,0);
+    const outSum=txs.filter(t=>t.type==='out').reduce((a,b)=>a+b.amount,0);
+    const start=this.props.startBalance ?? s.start;
+    const balance=start+inSum-outSum;
+
+    // week (7 days ending today)
+    const weekDates=[]; for(let i=6;i>=0;i--) weekDates.push(this.dstr(i));
+    const labels=['Su','Mo','Tu','We','Th','Fr','Sa'];
+    const weekDays=weekDates.map((ds,idx)=>{ const out=txs.filter(t=>t.type==='out'&&t.date===ds).reduce((a,b)=>a+b.amount,0); const isToday=ds===this.today; const dow=new Date(ds+'T00:00:00').getDay(); return {ds,out,isToday,label:labels[dow]}; });
+    const maxOut=Math.max(1,...weekDays.map(d=>d.out));
+    weekDays.forEach(d=>{ d.h=Math.max(5,Math.round(d.out/maxOut*118)); d.color=d.isToday?'#1f9d5a':'#cfe6d8'; d.labelColor=d.isToday?'#1d241f':'#9aa79c'; });
+    const weekOut=weekDays.reduce((a,b)=>a+b.out,0);
+    const weekIn=txs.filter(t=>t.type==='in'&&weekDates.includes(t.date)).reduce((a,b)=>a+b.amount,0);
+
+    // last week for delta
+    const lw=[]; for(let i=13;i>=7;i--) lw.push(this.dstr(i));
+    const lastWeekOut=txs.filter(t=>t.type==='out'&&lw.includes(t.date)).reduce((a,b)=>a+b.amount,0);
+    const deltaMore=weekOut>=lastWeekOut;
+    const deltaPct=lastWeekOut>0?Math.round(Math.abs(weekOut-lastWeekOut)/lastWeekOut*100):0;
+
+    // top categories this week
+    const map={}; txs.filter(t=>t.type==='out'&&weekDates.includes(t.date)).forEach(t=>{ map[t.cat]=(map[t.cat]||0)+t.amount; });
+    const topCats=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([cat,amt])=>({label:this.CATS[cat].label,iconClass:'ph-'+this.CATS[cat].icon,amountStr:this.fmt(amt),pct:Math.round(amt/(weekOut||1)*100)}));
+
+    // today
+    const todayTxRaw=txs.filter(t=>t.date===this.today);
+    const todaySpent=todayTxRaw.filter(t=>t.type==='out').reduce((a,b)=>a+b.amount,0);
+
+    // budget
+    const salary=s.salary, savings=s.savings;
+    const totalBills=this.bills.reduce((a,b)=>a+b.amount,0);
+    const totalDebt=this.debts.reduce((a,b)=>a+b.monthly,0);
+    const monthlyAvailable=salary-totalBills-totalDebt-savings;
+    const dailyBudget=Math.max(0,monthlyAvailable)/31;
+    const safe=dailyBudget-todaySpent;
+
+    const dailyPct=dailyBudget>0?Math.min(100,Math.round(todaySpent/dailyBudget*100)):0;
+    const over=todaySpent>dailyBudget;
+
+    // recent sorted
+    const sorted=txs.slice().sort((a,b)=> a.date<b.date?1 : a.date>b.date?-1 : (b.id-a.id));
+
+    // add screen chips
+    const catKeys=s.addType==='out'?this.expenseCats:this.incomeCats;
+    const chipBase='display:flex;flex-direction:column;align-items:center;gap:7px;min-width:66px;padding:11px 8px;border-radius:16px;cursor:pointer;font:700 11px Nunito;transition:all .15s;';
+    const catChips=catKeys.map(k=>{ const sel=k===s.addCat; return {key:k,label:this.CATS[k].label,iconClass:'ph-'+this.CATS[k].icon,onSelect:()=>this.setState({addCat:k}),chipStyle:chipBase+(sel?'border:1.5px solid #1f9d5a;background:#e8f5ec;color:#17784a;':'border:1.5px solid #ecebe6;background:#fff;color:#6b7670;')}; });
+
+    // keypad
+    const keypad=['1','2','3','4','5','6','7','8','9','.','0','back'].map(d=> d==='back'?{label:'\u232B',onPress:this.back}:{label:d,onPress:this.press(d)});
+
+    // moods
+    const moodBase='flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:16px;cursor:pointer;font:700 12px Nunito;transition:all .15s;';
+    const moodDefs=[{key:'great',label:'Great',icon:'ph-smiley'},{key:'okay',label:'Okay',icon:'ph-smiley-meh'},{key:'tight',label:'Tight',icon:'ph-smiley-nervous'}];
+    const moods=moodDefs.map(m=>{ const sel=s.mood===m.key; return {key:m.key,label:m.label,icon:m.icon,onPick:this.pickMood(m.key),style:moodBase+(sel?'border:1.5px solid #1f9d5a;background:#e8f5ec;color:#17784a;':'border:1.5px solid #ecebe6;background:#fff;color:#7a857c;')}; });
+
+    const act='#1f9d5a', inact='#9aa79c';
+    const seg='flex:1;display:flex;align-items:center;justify-content:center;gap:6px;height:44px;border-radius:13px;font:800 14px Nunito;cursor:pointer;border:none;transition:all .18s;';
+
+    return {
+      userName:name,
+      initial:(name[0]||'Y').toUpperCase(),
+      isHome:s.tab==='home', isAdd:s.tab==='add', isDaily:s.tab==='daily', isWeekly:s.tab==='weekly', isDebt:s.tab==='debt',
+      balanceStr:this.props.privacyMode?'\u2022\u2022\u2022\u2022 DH':this.fmt(balance),
+      weekInStr:this.fmt(weekIn), weekOutStr:this.fmt(weekOut),
+      safeStr:(safe<0?'-':'')+this.fmt(safe), safeColor:safe>=0?'#1f9d5a':'#e0674f',
+      dailyBudgetStr:this.fmt(dailyBudget),
+      recentTx:sorted.slice(0,10).map(t=>this.mapTx(t)),
+      // add
+      goHome:this.goHome, goDaily:this.goDaily, goWeekly:this.goWeekly, goDebt:this.goDebt, goAdd:this.goAdd,
+      typeExpense:this.typeExpense, typeIncome:this.typeIncome, onReason:this.onReason, saveTx:this.saveTx,
+      addAmount:s.addAmount, addReason:s.addReason,
+      addAmountColor:s.addType==='out'?'#e0674f':'#1f9d5a', addSign:s.addType==='out'?'-':'+',
+      todayNice:this.nice(this.today),
+      expBtnStyle:seg+(s.addType==='out'?'background:#fff;color:#e0674f;box-shadow:0 2px 8px rgba(0,0,0,.08);':'background:transparent;color:#9aa79c;'),
+      incBtnStyle:seg+(s.addType==='in'?'background:#fff;color:#1f9d5a;box-shadow:0 2px 8px rgba(0,0,0,.08);':'background:transparent;color:#9aa79c;'),
+      catChips, keypad,
+      // daily
+      dailyPct, todaySpentStr:this.fmt(todaySpent),
+      dailyStatus:over?'Over your daily budget':'You\u2019re on track',
+      dailyStatusColor:over?'#c85a45':'#17784a', dailyStatusBg:over?'#fbecec':'#e8f5ec',
+      dailyStatusIcon:over?'ph-warning':'ph-check-circle',
+      moods, hasTodayTx:todayTxRaw.length>0, noTodayTx:todayTxRaw.length===0,
+      todayTx:todayTxRaw.map(t=>this.mapTx(t)),
+      // weekly
+      weekRange:this.nice(weekDates[0])+' \u2013 '+this.nice(this.today),
+      weekDays, topCats,
+      deltaPct, deltaLabel:deltaMore?'more':'less',
+      deltaColor:deltaMore?'#c85a45':'#17784a', deltaBg:deltaMore?'#fbecec':'#e8f5ec',
+      deltaIcon:deltaMore?'ph-trend-up':'ph-trend-down',
+      // budget
+      monthlyAvailableStr:this.fmt(monthlyAvailable),
+      salaryStr:this.fmt(salary), savingsStr:this.fmt(savings), totalBillsStr:this.fmt(totalBills),
+      salaryMinus:this.salaryMinus, salaryPlus:this.salaryPlus, savingsMinus:this.savingsMinus, savingsPlus:this.savingsPlus,
+      billsList:this.bills.map(b=>({name:b.name,iconClass:b.icon,amountStr:this.fmt(b.amount)})),
+      debtsList:this.debts.map(d=>({name:d.name,iconClass:d.icon,totalStr:this.fmt(d.total),monthlyStr:this.fmt(d.monthly),months:Math.ceil(d.total/d.monthly)})),
+      // nav
+      navHome:s.tab==='home'?act:inact, navDaily:s.tab==='daily'?act:inact, navWeekly:s.tab==='weekly'?act:inact, navDebt:s.tab==='debt'?act:inact,
+      homeI:(s.tab==='home'?'ph-fill':'ph')+' ph-house',
+      dailyI:(s.tab==='daily'?'ph-fill':'ph')+' ph-calendar-check',
+      weeklyI:(s.tab==='weekly'?'ph-fill':'ph')+' ph-chart-bar',
+      debtI:(s.tab==='debt'?'ph-fill':'ph')+' ph-wallet',
+    };
+  }
+}
+</script>
+</body>
+</html>

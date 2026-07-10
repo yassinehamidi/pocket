@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "expo",
+      "runtimeExecutable": "cmd.exe",
+      "runtimeArgs": ["/c", "set PATH=C:\\Program Files\\nodejs;%PATH% && npx expo start"],
+      "port": 8081
+    },
+    {
+      "name": "expo-web",
+      "runtimeExecutable": "cmd.exe",
+      "runtimeArgs": ["/c", "set PATH=C:\\Program Files\\nodejs;%PATH% && npx expo start --web"],
+      "port": 8081
+    }
+  ]
+}

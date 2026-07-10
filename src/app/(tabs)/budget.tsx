@@ -1,0 +1,372 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Bank, CalendarDots, Minus, PiggyBank, Plus, SunHorizon } from 'phosphor-react-native';
+import { ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { PhosphorIcon } from '@/components/PhosphorIcon';
+import { confirmAction } from '@/lib/confirm';
+import { fmtDH } from '@/lib/format';
+import { getDailyBudget, getMonthlyAvailable, getTotalBills } from '@/lib/selectors';
+import { useFinanceStore } from '@/store/useFinanceStore';
+import { colors } from '@/theme/colors';
+import { fonts, type } from '@/theme/typography';
+
+function StepperCard({
+  icon,
+  label,
+  value,
+  onMinus,
+  onPlus,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
+  return (
+    <View style={styles.stepperCard}>
+      {icon}
+      <View style={{ flex: 1 }}>
+        <Text style={styles.stepperLabel}>{label}</Text>
+        <Text style={styles.stepperValue}>{value}</Text>
+      </View>
+      <View style={styles.stepperBtns}>
+        <Pressable style={styles.minusBtn} onPress={onMinus}>
+          <Minus size={16} color={colors.textSecondary} weight="bold" />
+        </Pressable>
+        <Pressable style={styles.plusBtn} onPress={onPlus}>
+          <Plus size={16} color={colors.white} weight="bold" />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+export default function BudgetScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const bills = useFinanceStore((s) => s.bills);
+  const debts = useFinanceStore((s) => s.debts);
+  const settings = useFinanceStore((s) => s.settings);
+  const adjustSalary = useFinanceStore((s) => s.adjustSalary);
+  const adjustSavingsGoal = useFinanceStore((s) => s.adjustSavingsGoal);
+  const removeBill = useFinanceStore((s) => s.removeBill);
+  const removeDebt = useFinanceStore((s) => s.removeDebt);
+
+  const monthlyAvailable = getMonthlyAvailable(settings, bills, debts);
+  const dailyBudget = getDailyBudget(settings, bills, debts);
+  const totalBills = getTotalBills(bills);
+
+  return (
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+      showsVerticalScrollIndicator={false}>
+      <Text style={styles.title}>Budget &amp; Debt</Text>
+
+      <LinearGradient
+        colors={colors.greenGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={styles.availableCard}>
+        <View style={styles.deco} />
+        <Text style={styles.availableLabel}>You can spend this month</Text>
+        <Text style={styles.availableValue}>{fmtDH(monthlyAvailable)}</Text>
+        <View style={styles.perDayPill}>
+          <SunHorizon size={17} color={colors.white} weight="fill" />
+          <Text style={styles.perDayText}>
+            {fmtDH(dailyBudget)} <Text style={styles.perDaySuffix}>/ day</Text>
+          </Text>
+        </View>
+        <Text style={styles.availableNote}>
+          Salary − bills − debt − savings, spread over 31 days.
+        </Text>
+      </LinearGradient>
+
+      <StepperCard
+        icon={
+          <View style={[styles.controlIconTile, { backgroundColor: colors.greenBgSoft }]}>
+            <Bank size={21} color={colors.greenDark} weight="fill" />
+          </View>
+        }
+        label="Monthly salary"
+        value={fmtDH(settings.salary)}
+        onMinus={() => adjustSalary(-500)}
+        onPlus={() => adjustSalary(500)}
+      />
+
+      <StepperCard
+        icon={
+          <View style={[styles.controlIconTile, { backgroundColor: colors.blueBgSoft }]}>
+            <PiggyBank size={21} color={colors.blue} weight="fill" />
+          </View>
+        }
+        label="Savings goal"
+        value={fmtDH(settings.savingsGoal)}
+        onMinus={() => adjustSavingsGoal(-100)}
+        onPlus={() => adjustSavingsGoal(100)}
+      />
+
+      <View style={styles.billsCard}>
+        <View style={styles.billsHeader}>
+          <Text style={styles.billsTitle}>Fixed bills</Text>
+          <View style={styles.billsHeaderRight}>
+            {bills.length > 0 && <Text style={styles.billsTotal}>{fmtDH(totalBills)}</Text>}
+            <Pressable style={styles.addSmallBtn} onPress={() => router.push('/new-bill')}>
+              <Plus size={14} color={colors.white} weight="bold" />
+            </Pressable>
+          </View>
+        </View>
+        {bills.length === 0 ? (
+          <Text style={styles.emptyInline}>
+            No bills yet — add rent, internet, phone… so Pocket can plan your daily budget.
+          </Text>
+        ) : (
+          <View style={styles.billsList}>
+            {bills.map((b) => (
+              <Pressable
+                key={b.id}
+                style={styles.billRow}
+                onLongPress={() =>
+                  confirmAction('Remove bill?', `Delete "${b.name}" from your fixed bills.`, () =>
+                    removeBill(b.id),
+                  )
+                }>
+                <View style={styles.billName}>
+                  <PhosphorIcon name={b.icon} size={16} color={colors.textMuted} />
+                  <Text style={styles.billNameText}>{b.name}</Text>
+                </View>
+                <Text style={styles.billAmount}>{fmtDH(b.amount)}</Text>
+              </Pressable>
+            ))}
+            <Text style={styles.hint}>Hold a bill to remove it</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Your debts</Text>
+        <Pressable style={styles.addSmallBtn} onPress={() => router.push('/new-debt')}>
+          <Plus size={14} color={colors.white} weight="bold" />
+        </Pressable>
+      </View>
+      {debts.length === 0 && (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyText}>
+            No debts — nice! If you have a loan or credit to pay off, add it here and Pocket
+            will set the monthly payment aside.
+          </Text>
+        </View>
+      )}
+      <View style={styles.debtList}>
+        {debts.map((d) => (
+          <Pressable
+            key={d.id}
+            style={styles.debtCard}
+            onLongPress={() =>
+              confirmAction('Remove debt?', `Delete "${d.name}" from your debts.`, () =>
+                removeDebt(d.id),
+              )
+            }>
+            <View style={styles.debtRow}>
+              <View style={styles.debtIconTile}>
+                <PhosphorIcon name={d.icon} size={21} color={colors.redDark} weight="fill" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.debtName}>{d.name}</Text>
+                <Text style={styles.debtRemaining}>Remaining {fmtDH(d.total)}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.debtMonthly}>{fmtDH(d.monthly)}</Text>
+                <Text style={styles.debtPerMonth}>/ month</Text>
+              </View>
+            </View>
+            <View style={styles.debtFooter}>
+              <CalendarDots size={15} color={colors.textBody} />
+              <Text style={styles.debtMonthsLeft}>{d.monthsLeft} months left</Text>
+            </View>
+          </Pressable>
+        ))}
+        {debts.length > 0 && <Text style={styles.hint}>Hold a debt to remove it</Text>}
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { paddingHorizontal: 20, paddingBottom: 32 },
+  title: {
+    ...type.screenTitle,
+    color: colors.textPrimary,
+    marginTop: 6,
+    marginBottom: 14,
+    marginHorizontal: 2,
+  },
+
+  availableCard: {
+    borderRadius: 26,
+    padding: 22,
+    overflow: 'hidden',
+    shadowColor: '#158a4c',
+    shadowOpacity: 0.6,
+    shadowRadius: 36,
+    shadowOffset: { width: 0, height: 20 },
+    elevation: 12,
+  },
+  deco: {
+    position: 'absolute',
+    top: -40,
+    right: -30,
+    width: 150,
+    height: 150,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  availableLabel: { ...type.cardLabel, color: colors.white, opacity: 0.9 },
+  availableValue: { ...type.bigFigure, color: colors.white, marginTop: 4 },
+  perDayPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginTop: 14,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 16,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+  },
+  perDayText: { ...type.statValue, color: colors.white },
+  perDaySuffix: { fontFamily: fonts.bold, opacity: 0.8 },
+  availableNote: {
+    fontFamily: fonts.semiBold,
+    fontSize: 11.5,
+    lineHeight: 17,
+    color: colors.white,
+    opacity: 0.85,
+    marginTop: 14,
+  },
+
+  stepperCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 13,
+  },
+  controlIconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperLabel: { ...type.smallLabel, color: colors.textMuted },
+  stepperValue: { fontFamily: fonts.extraBold, fontSize: 20, color: colors.textPrimary },
+  stepperBtns: { flexDirection: 'row', gap: 8 },
+  minusBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: colors.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  billsCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 12,
+  },
+  billsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  billsHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  billsTitle: { ...type.cardLabel, color: colors.textPrimary },
+  billsTotal: { ...type.sectionTitle, color: colors.textPrimary },
+  addSmallBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 9,
+    backgroundColor: colors.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyInline: { ...type.rowSubtitle, color: colors.textMuted, marginTop: 10, lineHeight: 18 },
+  emptyCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.dashedBorder,
+    borderRadius: 20,
+    padding: 20,
+  },
+  emptyText: { ...type.rowSubtitle, color: colors.textMuted, lineHeight: 18 },
+  hint: { ...type.rowSubtitle, color: colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: 4 },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 22,
+    marginBottom: 12,
+    marginHorizontal: 4,
+  },
+  billsList: { gap: 9, marginTop: 12 },
+  billRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  billName: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  billNameText: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.textSecondary },
+  billAmount: { ...type.cardLabel, color: colors.textPrimary },
+
+  sectionTitle: { ...type.subsectionTitle, color: colors.textPrimary },
+  debtList: { gap: 11 },
+  debtCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+  },
+  debtRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  debtIconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.redBgSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  debtName: { ...type.subsectionTitle, color: colors.textPrimary },
+  debtRemaining: { ...type.rowSubtitle, color: colors.textMuted },
+  debtMonthly: { ...type.subsectionTitle, color: colors.red },
+  debtPerMonth: { fontFamily: fonts.semiBold, fontSize: 11, color: colors.textMuted },
+  debtFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  debtMonthsLeft: { ...type.smallLabel, color: colors.textBody },
+});
