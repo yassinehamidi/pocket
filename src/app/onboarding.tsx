@@ -9,13 +9,14 @@ import {
 } from 'phosphor-react-native';
 import { useRef, useState } from 'react';
 import {
-  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
-  ViewToken,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -68,15 +69,15 @@ export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
-  const listRef = useRef<FlatList<Slide>>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
 
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      const first = viewableItems[0];
-      if (first && typeof first.index === 'number') setIndex(first.index);
-    },
-  ).current;
+  // Track the current page from the scroll offset (FlatList's viewability
+  // callbacks don't fire on react-native-web, so we do the math ourselves).
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const page = Math.round(e.nativeEvent.contentOffset.x / width);
+    if (page !== index && page >= 0 && page < SLIDES.length) setIndex(page);
+  };
 
   const isLast = index === SLIDES.length - 1;
 
@@ -84,7 +85,9 @@ export default function OnboardingScreen() {
     if (isLast) {
       completeOnboarding();
     } else {
-      listRef.current?.scrollToIndex({ index: index + 1, animated: true });
+      const target = index + 1;
+      scrollRef.current?.scrollTo({ x: target * width, animated: true });
+      setIndex(target);
     }
   };
 
@@ -100,19 +103,18 @@ export default function OnboardingScreen() {
         </Pressable>
       </View>
 
-      <FlatList
-        ref={listRef}
-        data={SLIDES}
-        keyExtractor={(s) => s.key}
+      <ScrollView
+        ref={scrollRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
-        renderItem={({ item }) => {
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        style={{ flex: 1 }}>
+        {SLIDES.map((item) => {
           const SlideIcon = item.icon;
           return (
-            <View style={[styles.slide, { width }]}>
+            <View key={item.key} style={[styles.slide, { width }]}>
               <View style={styles.iconTile}>
                 <SlideIcon size={64} color={colors.greenDark} weight="fill" />
               </View>
@@ -120,8 +122,8 @@ export default function OnboardingScreen() {
               <Text style={styles.body}>{item.body}</Text>
             </View>
           );
-        }}
-      />
+        })}
+      </ScrollView>
 
       <View style={styles.dots}>
         {SLIDES.map((s, i) => (
