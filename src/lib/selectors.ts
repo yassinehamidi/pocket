@@ -1,5 +1,5 @@
 import { CATEGORIES } from '@/data/categories';
-import { last7Days, previous7Days, todayISO, weekdayLabel } from '@/lib/dates';
+import { last7Days, monthISO, previous7Days, todayISO, weekdayLabel } from '@/lib/dates';
 import { Bill, CategoryKey, Debt, Transaction, UserSettings } from '@/lib/types';
 
 /**
@@ -28,6 +28,20 @@ export function getTotalBills(bills: Bill[]): number {
 
 export function getTotalDebtMonthly(debts: Debt[]): number {
   return debts.reduce((a, d) => a + d.monthly, 0);
+}
+
+/** How many bills haven't been marked paid this month. */
+export function getBillsLeft(bills: Bill[]): number {
+  const month = monthISO();
+  return bills.filter((b) => b.lastPaidMonth !== month).length;
+}
+
+/** Percentage (0–100) of total debt still owed, or null when there is no debt history. */
+export function getDebtPercentLeft(debts: Debt[]): number | null {
+  const original = debts.reduce((a, d) => a + d.originalTotal, 0);
+  if (original <= 0) return null;
+  const remaining = debts.reduce((a, d) => a + d.total, 0);
+  return Math.round((remaining / original) * 100);
 }
 
 /** What's left of salary after bills, debt payments, and the savings goal. */

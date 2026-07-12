@@ -3,8 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { CATEGORIES } from '@/data/categories';
 import { friendlyDate } from '@/lib/dates';
-import { fmtDH } from '@/lib/format';
+import { fmtMoney } from '@/lib/format';
 import { Transaction } from '@/lib/types';
+import { useFinanceStore } from '@/store/useFinanceStore';
 import { colors } from '@/theme/colors';
 import { type } from '@/theme/typography';
 
@@ -15,6 +16,8 @@ interface Props {
 }
 
 export function TransactionRow({ tx, showDate = true }: Props) {
+  // Subscribed so amounts re-format when the user changes region/currency.
+  useFinanceStore((s) => s.settings.currency);
   const cat = CATEGORIES[tx.category];
   const isOut = tx.type === 'out';
   return (
@@ -33,7 +36,7 @@ export function TransactionRow({ tx, showDate = true }: Props) {
       </View>
       <Text style={[styles.amount, { color: isOut ? colors.red : colors.green }]}>
         {isOut ? '-' : '+'}
-        {fmtDH(tx.amount)}
+        {fmtMoney(tx.amount)}
       </Text>
     </View>
   );

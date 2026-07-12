@@ -1,4 +1,4 @@
-import { daysAgoISO } from '@/lib/dates';
+import { daysAgoISO, monthISO } from '@/lib/dates';
 import { Bill, Debt, Transaction, UserSettings } from '@/lib/types';
 
 /**
@@ -22,15 +22,15 @@ export const seedTransactions: Transaction[] = [
 ];
 
 export const seedBills: Bill[] = [
-  { id: 'b1', name: 'Rent', amount: 2500, icon: 'house' },
+  { id: 'b1', name: 'Rent', amount: 2500, icon: 'house', lastPaidMonth: monthISO() },
   { id: 'b2', name: 'Utilities', amount: 400, icon: 'lightning' },
   { id: 'b3', name: 'Internet', amount: 200, icon: 'wifi-high' },
   { id: 'b4', name: 'Phone', amount: 150, icon: 'device-mobile' },
 ];
 
 export const seedDebts: Debt[] = [
-  { id: 'd1', name: 'Car loan', total: 24000, monthly: 1200, icon: 'car', monthsLeft: 20 },
-  { id: 'd2', name: 'Credit card', total: 6000, monthly: 800, icon: 'credit-card', monthsLeft: 8 },
+  { id: 'd1', name: 'Car loan', total: 24000, monthly: 1200, icon: 'car', monthsLeft: 20, originalTotal: 36000 },
+  { id: 'd2', name: 'Credit card', total: 6000, monthly: 800, icon: 'credit-card', monthsLeft: 8, originalTotal: 9000 },
 ];
 
 export const seedSettings: UserSettings = {
@@ -39,4 +39,6 @@ export const seedSettings: UserSettings = {
   salary: 8000,
   savingsGoal: 1000,
   privacyMode: false,
+  region: 'MA',
+  currency: 'MAD',
 };

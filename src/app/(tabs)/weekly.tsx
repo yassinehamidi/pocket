@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { PocketPop } from '@/components/PocketPop';
 import { last7Days, niceDate, todayISO } from '@/lib/dates';
-import { fmtDH } from '@/lib/format';
+import { fmtMoney } from '@/lib/format';
 import {
   getTopCategoriesThisWeek,
   getWeekDayBars,
@@ -27,6 +27,8 @@ const MAX_BAR_HEIGHT = 118;
 export default function WeeklyScreen() {
   const insets = useSafeAreaInsets();
   const transactions = useFinanceStore((s) => s.transactions);
+  // Subscribed so amounts re-format when the user changes region/currency.
+  useFinanceStore((s) => s.settings.currency);
 
   const { weekIn, weekOut } = getWeekTotals(transactions);
   const bars = getWeekDayBars(transactions);
@@ -49,7 +51,7 @@ export default function WeeklyScreen() {
         <View style={styles.chartHeader}>
           <View>
             <Text style={styles.chartLabel}>Spent this week</Text>
-            <Text style={styles.chartValue}>{fmtDH(weekOut)}</Text>
+            <Text style={styles.chartValue}>{fmtMoney(weekOut)}</Text>
           </View>
           <View
             style={[
@@ -101,14 +103,14 @@ export default function WeeklyScreen() {
             <ArrowCircleDown size={14} color={colors.green} weight="fill" />
             <Text style={[styles.statLabel, { color: colors.green }]}>Income</Text>
           </View>
-          <Text style={styles.statValue}>{fmtDH(weekIn)}</Text>
+          <Text style={styles.statValue}>{fmtMoney(weekIn)}</Text>
         </View>
         <View style={styles.statCard}>
           <View style={styles.statLabelRow}>
             <ArrowCircleUp size={14} color={colors.red} weight="fill" />
             <Text style={[styles.statLabel, { color: colors.red }]}>Spending</Text>
           </View>
-          <Text style={styles.statValue}>{fmtDH(weekOut)}</Text>
+          <Text style={styles.statValue}>{fmtMoney(weekOut)}</Text>
         </View>
       </View>
 
@@ -129,7 +131,7 @@ export default function WeeklyScreen() {
                 <PhosphorIcon name={c.icon} size={18} color={colors.greenIconTileFg} />
               </View>
               <Text style={styles.catLabel}>{c.label}</Text>
-              <Text style={styles.catAmount}>{fmtDH(c.amount)}</Text>
+              <Text style={styles.catAmount}>{fmtMoney(c.amount)}</Text>
             </View>
             <View style={styles.catTrack}>
               <View style={[styles.catFill, { width: `${c.pct}%` }]} />

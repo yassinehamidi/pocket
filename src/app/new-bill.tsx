@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/FormField';
+import { currencySymbol } from '@/lib/format';
 import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { PocketPop } from '@/components/PocketPop';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -75,7 +76,7 @@ export default function NewBillScreen() {
             error={errors.name}
           />
           <FormField
-            label="Amount per month (DH)"
+            label={`Amount per month (${currencySymbol()})`}
             value={amount}
             onChangeText={setAmount}
             placeholder="0"

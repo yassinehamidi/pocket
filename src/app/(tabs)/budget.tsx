@@ -1,14 +1,24 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Bank, CalendarDots, Minus, PiggyBank, Plus, SunHorizon } from 'phosphor-react-native';
-import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Bank,
+  CalendarDots,
+  CheckCircle,
+  Minus,
+  PencilSimple,
+  PiggyBank,
+  Plus,
+  SunHorizon,
+} from 'phosphor-react-native';
+import { ReactNode, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { PocketPop } from '@/components/PocketPop';
 import { confirmAction } from '@/lib/confirm';
-import { fmtDH } from '@/lib/format';
+import { fmtMoney } from '@/lib/format';
+import { monthISO } from '@/lib/dates';
 import { getDailyBudget, getMonthlyAvailable, getTotalBills } from '@/lib/selectors';
 import { useFinanceStore } from '@/store/useFinanceStore';
 import { colors } from '@/theme/colors';
@@ -17,22 +27,57 @@ import { fonts, type } from '@/theme/typography';
 function StepperCard({
   icon,
   label,
-  value,
+  amount,
   onMinus,
   onPlus,
+  onSet,
 }: {
   icon: ReactNode;
   label: string;
-  value: string;
+  amount: number;
   onMinus: () => void;
   onPlus: () => void;
+  /** Called with the typed value when the amount is edited directly. */
+  onSet: (value: number) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  const startEditing = () => {
+    setDraft(amount > 0 ? String(amount) : '');
+    setEditing(true);
+  };
+
+  const commit = () => {
+    const value = parseFloat(draft);
+    if (!isNaN(value) && value >= 0) onSet(Math.round(value));
+    setEditing(false);
+  };
+
   return (
     <View style={styles.stepperCard}>
       {icon}
       <View style={{ flex: 1 }}>
         <Text style={styles.stepperLabel}>{label}</Text>
-        <Text style={styles.stepperValue}>{value}</Text>
+        {editing ? (
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            keyboardType="numeric"
+            autoFocus
+            selectTextOnFocus
+            placeholder="0"
+            placeholderTextColor={colors.textMuted}
+            onBlur={commit}
+            onSubmitEditing={commit}
+            style={styles.stepperInput}
+          />
+        ) : (
+          <Pressable style={styles.stepperValueRow} onPress={startEditing}>
+            <Text style={styles.stepperValue}>{fmtMoney(amount)}</Text>
+            <PencilSimple size={14} color={colors.textMuted} />
+          </Pressable>
+        )}
       </View>
       <View style={styles.stepperBtns}>
         <Pressable style={styles.minusBtn} onPress={onMinus}>
@@ -54,8 +99,13 @@ export default function BudgetScreen() {
   const settings = useFinanceStore((s) => s.settings);
   const adjustSalary = useFinanceStore((s) => s.adjustSalary);
   const adjustSavingsGoal = useFinanceStore((s) => s.adjustSavingsGoal);
+  const setSalary = useFinanceStore((s) => s.setSalary);
+  const setSavingsGoal = useFinanceStore((s) => s.setSavingsGoal);
   const removeBill = useFinanceStore((s) => s.removeBill);
   const removeDebt = useFinanceStore((s) => s.removeDebt);
+  const toggleBillPaid = useFinanceStore((s) => s.toggleBillPaid);
+  const recordDebtPayment = useFinanceStore((s) => s.recordDebtPayment);
+  const thisMonth = monthISO();
 
   const monthlyAvailable = getMonthlyAvailable(settings, bills, debts);
   const dailyBudget = getDailyBudget(settings, bills, debts);
@@ -76,11 +126,11 @@ export default function BudgetScreen() {
         style={styles.availableCard}>
         <View style={styles.deco} />
         <Text style={styles.availableLabel}>You can spend this month</Text>
-        <Text style={styles.availableValue}>{fmtDH(monthlyAvailable)}</Text>
+        <Text style={styles.availableValue}>{fmtMoney(monthlyAvailable)}</Text>
         <View style={styles.perDayPill}>
           <SunHorizon size={17} color={colors.white} weight="fill" />
           <Text style={styles.perDayText}>
-            {fmtDH(dailyBudget)} <Text style={styles.perDaySuffix}>/ day</Text>
+            {fmtMoney(dailyBudget)} <Text style={styles.perDaySuffix}>/ day</Text>
           </Text>
         </View>
         <Text style={styles.availableNote}>
@@ -95,9 +145,10 @@ export default function BudgetScreen() {
           </View>
         }
         label="Monthly salary"
-        value={fmtDH(settings.salary)}
+        amount={settings.salary}
         onMinus={() => adjustSalary(-500)}
         onPlus={() => adjustSalary(500)}
+        onSet={setSalary}
       />
 
       <StepperCard
@@ -107,16 +158,17 @@ export default function BudgetScreen() {
           </View>
         }
         label="Savings goal"
-        value={fmtDH(settings.savingsGoal)}
+        amount={settings.savingsGoal}
         onMinus={() => adjustSavingsGoal(-100)}
         onPlus={() => adjustSavingsGoal(100)}
+        onSet={setSavingsGoal}
       />
 
       <View style={styles.billsCard}>
         <View style={styles.billsHeader}>
           <Text style={styles.billsTitle}>Fixed bills</Text>
           <View style={styles.billsHeaderRight}>
-            {bills.length > 0 && <Text style={styles.billsTotal}>{fmtDH(totalBills)}</Text>}
+            {bills.length > 0 && <Text style={styles.billsTotal}>{fmtMoney(totalBills)}</Text>}
             <Pressable style={styles.addSmallBtn} onPress={() => router.push('/new-bill')}>
               <Plus size={14} color={colors.white} weight="bold" />
             </Pressable>
@@ -128,23 +180,35 @@ export default function BudgetScreen() {
           </Text>
         ) : (
           <View style={styles.billsList}>
-            {bills.map((b) => (
-              <Pressable
-                key={b.id}
-                style={styles.billRow}
-                onLongPress={() =>
-                  confirmAction('Remove bill?', `Delete "${b.name}" from your fixed bills.`, () =>
-                    removeBill(b.id),
-                  )
-                }>
-                <View style={styles.billName}>
-                  <PhosphorIcon name={b.icon} size={16} color={colors.textMuted} />
-                  <Text style={styles.billNameText}>{b.name}</Text>
-                </View>
-                <Text style={styles.billAmount}>{fmtDH(b.amount)}</Text>
-              </Pressable>
-            ))}
-            <Text style={styles.hint}>Hold a bill to remove it</Text>
+            {bills.map((b) => {
+              const paid = b.lastPaidMonth === thisMonth;
+              return (
+                <Pressable
+                  key={b.id}
+                  style={styles.billRow}
+                  onPress={() => toggleBillPaid(b.id)}
+                  onLongPress={() =>
+                    confirmAction('Remove bill?', `Delete "${b.name}" from your fixed bills.`, () =>
+                      removeBill(b.id),
+                    )
+                  }>
+                  <View style={styles.billName}>
+                    {paid ? (
+                      <CheckCircle size={16} color={colors.green} weight="fill" />
+                    ) : (
+                      <PhosphorIcon name={b.icon} size={16} color={colors.textMuted} />
+                    )}
+                    <Text style={[styles.billNameText, paid && styles.billNamePaid]}>
+                      {b.name}
+                    </Text>
+                  </View>
+                  <Text style={[styles.billAmount, paid && styles.billNamePaid]}>
+                    {fmtMoney(b.amount)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            <Text style={styles.hint}>Tap a bill to mark it paid · hold to remove</Text>
           </View>
         )}
       </View>
@@ -164,35 +228,58 @@ export default function BudgetScreen() {
         </View>
       )}
       <View style={styles.debtList}>
-        {debts.map((d) => (
-          <Pressable
-            key={d.id}
-            style={styles.debtCard}
-            onLongPress={() =>
-              confirmAction('Remove debt?', `Delete "${d.name}" from your debts.`, () =>
-                removeDebt(d.id),
-              )
-            }>
-            <View style={styles.debtRow}>
-              <View style={styles.debtIconTile}>
-                <PhosphorIcon name={d.icon} size={21} color={colors.redDark} weight="fill" />
+        {debts.map((d) => {
+          const pctLeft =
+            d.originalTotal > 0 ? Math.round((d.total / d.originalTotal) * 100) : 100;
+          return (
+            <Pressable
+              key={d.id}
+              style={styles.debtCard}
+              onPress={() =>
+                d.total > 0 &&
+                confirmAction(
+                  'Record payment?',
+                  `Reduce "${d.name}" by ${fmtMoney(d.monthly)} (this month's payment).`,
+                  () => recordDebtPayment(d.id),
+                )
+              }
+              onLongPress={() =>
+                confirmAction('Remove debt?', `Delete "${d.name}" from your debts.`, () =>
+                  removeDebt(d.id),
+                )
+              }>
+              <View style={styles.debtRow}>
+                <View style={styles.debtIconTile}>
+                  <PhosphorIcon name={d.icon} size={21} color={colors.redDark} weight="fill" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.debtName}>{d.name}</Text>
+                  <Text style={styles.debtRemaining}>
+                    {d.total > 0 ? `Remaining ${fmtMoney(d.total)}` : 'Paid off 🎉'}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.debtMonthly}>{fmtMoney(d.monthly)}</Text>
+                  <Text style={styles.debtPerMonth}>/ month</Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.debtName}>{d.name}</Text>
-                <Text style={styles.debtRemaining}>Remaining {fmtDH(d.total)}</Text>
+              <View style={styles.debtTrack}>
+                <View style={[styles.debtFill, { width: `${100 - pctLeft}%` }]} />
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.debtMonthly}>{fmtDH(d.monthly)}</Text>
-                <Text style={styles.debtPerMonth}>/ month</Text>
+              <View style={styles.debtFooter}>
+                <CalendarDots size={15} color={colors.textBody} />
+                <Text style={styles.debtMonthsLeft}>
+                  {d.total > 0
+                    ? `${d.monthsLeft} months left · ${pctLeft}% to go`
+                    : `was ${fmtMoney(d.originalTotal)}`}
+                </Text>
               </View>
-            </View>
-            <View style={styles.debtFooter}>
-              <CalendarDots size={15} color={colors.textBody} />
-              <Text style={styles.debtMonthsLeft}>{d.monthsLeft} months left</Text>
-            </View>
-          </Pressable>
-        ))}
-        {debts.length > 0 && <Text style={styles.hint}>Hold a debt to remove it</Text>}
+            </Pressable>
+          );
+        })}
+        {debts.length > 0 && (
+          <Text style={styles.hint}>Tap a debt to record a payment · hold to remove</Text>
+        )}
       </View>
     </ScrollView>
     </PocketPop>
@@ -273,7 +360,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepperLabel: { ...type.smallLabel, color: colors.textMuted },
+  stepperValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stepperValue: { fontFamily: fonts.extraBold, fontSize: 20, color: colors.textPrimary },
+  stepperInput: {
+    fontFamily: fonts.extraBold,
+    fontSize: 20,
+    color: colors.textPrimary,
+    padding: 0,
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.green,
+    minWidth: 110,
+    alignSelf: 'flex-start',
+  },
   stepperBtns: { flexDirection: 'row', gap: 8 },
   minusBtn: {
     width: 34,
@@ -337,6 +435,7 @@ const styles = StyleSheet.create({
   billRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   billName: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   billNameText: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.textSecondary },
+  billNamePaid: { color: colors.textMuted, textDecorationLine: 'line-through' },
   billAmount: { ...type.cardLabel, color: colors.textPrimary },
 
   sectionTitle: { ...type.subsectionTitle, color: colors.textPrimary },
@@ -362,6 +461,14 @@ const styles = StyleSheet.create({
   debtRemaining: { ...type.rowSubtitle, color: colors.textMuted },
   debtMonthly: { ...type.subsectionTitle, color: colors.red },
   debtPerMonth: { fontFamily: fonts.semiBold, fontSize: 11, color: colors.textMuted },
+  debtTrack: {
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.track,
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  debtFill: { height: '100%', borderRadius: 4, backgroundColor: colors.green },
   debtFooter: {
     flexDirection: 'row',
     alignItems: 'center',

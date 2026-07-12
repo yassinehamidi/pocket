@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FormField } from '@/components/FormField';
 import { PocketPop } from '@/components/PocketPop';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { RegionPicker } from '@/components/RegionPicker';
+import { CURRENCIES, DEFAULT_REGION, getRegion } from '@/data/currencies';
 import { isValidEmail } from '@/lib/auth';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFinanceStore } from '@/store/useFinanceStore';
@@ -24,14 +26,18 @@ export default function SignUpScreen() {
   const insets = useSafeAreaInsets();
   const signUp = useAuthStore((s) => s.signUp);
   const setStartBalance = useFinanceStore((s) => s.setStartBalance);
+  const setRegion = useFinanceStore((s) => s.setRegion);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [region, setRegionInput] = useState(DEFAULT_REGION);
   const [startBalance, setStartBalanceInput] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+
+  const currency = CURRENCIES[getRegion(region).currency];
 
   const submit = async () => {
     const next: Record<string, string> = {};
@@ -47,6 +53,7 @@ export default function SignUpScreen() {
     setBusy(true);
     try {
       await signUp({ name, email, password });
+      setRegion(region);
       const start = parseFloat(startBalance);
       if (!isNaN(start) && start > 0) setStartBalance(start);
       // Route guards switch to the app stack automatically.
@@ -120,8 +127,9 @@ export default function SignUpScreen() {
             icon={<LockSimple size={18} color={colors.textMuted} />}
             error={errors.confirm}
           />
+          <RegionPicker label="Region" value={region} onChange={setRegionInput} />
           <FormField
-            label="Current balance in DH (optional)"
+            label={`Current balance in ${currency.symbol} (optional)`}
             value={startBalance}
             onChangeText={setStartBalanceInput}
             placeholder="What’s in your pocket right now?"

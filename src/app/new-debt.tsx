@@ -17,7 +17,7 @@ import { FormField } from '@/components/FormField';
 import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { PocketPop } from '@/components/PocketPop';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { fmtDH } from '@/lib/format';
+import { currencySymbol, fmtMoney } from '@/lib/format';
 import { useFinanceStore } from '@/store/useFinanceStore';
 import { colors } from '@/theme/colors';
 import { type } from '@/theme/typography';
@@ -84,7 +84,7 @@ export default function NewDebtScreen() {
             error={errors.name}
           />
           <FormField
-            label="Remaining amount (DH)"
+            label={`Remaining amount (${currencySymbol()})`}
             value={total}
             onChangeText={setTotal}
             placeholder="0"
@@ -93,7 +93,7 @@ export default function NewDebtScreen() {
             error={errors.total}
           />
           <FormField
-            label="Monthly payment (DH)"
+            label={`Monthly payment (${currencySymbol()})`}
             value={monthly}
             onChangeText={setMonthly}
             placeholder="0"
@@ -107,7 +107,7 @@ export default function NewDebtScreen() {
               <CalendarDots size={15} color={colors.greenDark} />
               <Text style={styles.previewText}>
                 Paid off in {monthsLeft} month{monthsLeft === 1 ? '' : 's'} at{' '}
-                {fmtDH(monthlyValue)} / month
+                {fmtMoney(monthlyValue)} / month
               </Text>
             </View>
           )}

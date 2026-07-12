@@ -36,15 +36,20 @@ export interface Bill {
   name: string;
   amount: number;
   icon: string;
+  /** Local month (YYYY-MM) this bill was last marked paid, if any. */
+  lastPaidMonth?: string;
 }
 
 export interface Debt {
   id: string;
   name: string;
+  /** Amount still owed. */
   total: number;
   monthly: number;
   icon: string;
   monthsLeft: number;
+  /** Amount owed when the debt was first added — for progress display. */
+  originalTotal: number;
 }
 
 export interface UserSettings {
@@ -53,6 +58,9 @@ export interface UserSettings {
   salary: number;
   savingsGoal: number;
   privacyMode: boolean;
+  /** Region key from data/currencies.ts REGIONS (e.g. "MA"). */
+  region: string;
+  /** ISO currency code from data/currencies.ts CURRENCIES (e.g. "MAD"). */
+  currency: string;
 }
 
-export type Mood = 'great' | 'okay' | 'tight';

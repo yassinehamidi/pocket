@@ -24,6 +24,7 @@ import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { PocketPop } from '@/components/PocketPop';
 import { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/data/categories';
 import { niceDate, todayISO } from '@/lib/dates';
+import { currencySymbol } from '@/lib/format';
 import { CategoryKey, TransactionType } from '@/lib/types';
 import { useFinanceStore } from '@/store/useFinanceStore';
 import { colors } from '@/theme/colors';
@@ -115,7 +116,7 @@ export default function AddScreen() {
       <View style={styles.amountWrap}>
         <Text style={[styles.amount, { color: isOut ? colors.red : colors.green }]}>
           {isOut ? '-' : '+'}
-          {amount} <Text style={styles.amountUnit}>DH</Text>
+          {amount} <Text style={styles.amountUnit}>{currencySymbol()}</Text>
         </Text>
         <Text style={styles.amountDate}>Today · {niceDate(todayISO())}</Text>
       </View>

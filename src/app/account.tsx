@@ -23,8 +23,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FormField } from '@/components/FormField';
 import { PocketPop } from '@/components/PocketPop';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { RegionPicker } from '@/components/RegionPicker';
 import { confirmAction } from '@/lib/confirm';
-import { fmtDH } from '@/lib/format';
+import { fmtMoney } from '@/lib/format';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFinanceStore } from '@/store/useFinanceStore';
 import { colors } from '@/theme/colors';
@@ -40,6 +41,8 @@ export default function AccountScreen() {
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const startBalance = useFinanceStore((s) => s.settings.startBalance);
   const setStartBalance = useFinanceStore((s) => s.setStartBalance);
+  const region = useFinanceStore((s) => s.settings.region);
+  const setRegion = useFinanceStore((s) => s.setRegion);
 
   const [name, setName] = useState(account?.name ?? '');
   const [balanceInput, setBalanceInput] = useState(
@@ -139,8 +142,16 @@ export default function AccountScreen() {
             icon={<User size={18} color={colors.textMuted} />}
             error={errors.name}
           />
+          <RegionPicker
+            label="Region & currency"
+            value={region}
+            onChange={(key) => {
+              setRegion(key);
+              flash('Region updated');
+            }}
+          />
           <FormField
-            label={`Starting balance (currently ${fmtDH(startBalance)})`}
+            label={`Starting balance (currently ${fmtMoney(startBalance)})`}
             value={balanceInput}
             onChangeText={setBalanceInput}
             placeholder="0"

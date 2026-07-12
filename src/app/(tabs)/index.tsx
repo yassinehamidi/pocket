@@ -4,6 +4,7 @@ import {
   ArrowCircleDown,
   ArrowCircleUp,
   Coins,
+  CreditCard,
   GearSix,
   Receipt,
   Wallet,
@@ -13,10 +14,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PocketPop } from '@/components/PocketPop';
 import { TransactionRow } from '@/components/TransactionRow';
-import { fmtDH, fmtDHSigned } from '@/lib/format';
+import { currencySymbol, fmtMoney, fmtMoneySigned } from '@/lib/format';
 import {
   getBalance,
+  getBillsLeft,
   getDailyBudget,
+  getDebtPercentLeft,
   getRecentTransactions,
   getSafeToSpendToday,
   getWeekTotals,
@@ -24,7 +27,7 @@ import {
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFinanceStore } from '@/store/useFinanceStore';
 import { colors } from '@/theme/colors';
-import { type } from '@/theme/typography';
+import { fonts, type } from '@/theme/typography';
 
 function greetingForNow(): string {
   const h = new Date().getHours();
@@ -48,6 +51,8 @@ export default function HomeScreen() {
   const dailyBudget = getDailyBudget(settings, bills, debts);
   const safe = getSafeToSpendToday(transactions, settings, bills, debts);
   const recent = getRecentTransactions(transactions);
+  const billsLeft = getBillsLeft(bills);
+  const debtPctLeft = getDebtPercentLeft(debts);
 
   return (
     <PocketPop>
@@ -84,7 +89,7 @@ export default function HomeScreen() {
           <Text style={styles.balanceLabel}>Total balance</Text>
         </View>
         <Text style={styles.balanceValue}>
-          {settings.privacyMode ? '•••• DH' : fmtDH(balance)}
+          {settings.privacyMode ? `•••• ${currencySymbol()}` : fmtMoney(balance)}
         </Text>
         <View style={styles.statRow}>
           <View style={styles.statBox}>
@@ -92,16 +97,38 @@ export default function HomeScreen() {
               <ArrowCircleDown size={13} color={colors.white} weight="fill" />
               <Text style={styles.statLabel}>In this week</Text>
             </View>
-            <Text style={styles.statValue}>{fmtDH(weekIn)}</Text>
+            <Text style={styles.statValue}>{fmtMoney(weekIn)}</Text>
           </View>
           <View style={styles.statBox}>
             <View style={styles.statLabelRow}>
               <ArrowCircleUp size={13} color={colors.white} weight="fill" />
               <Text style={styles.statLabel}>Out this week</Text>
             </View>
-            <Text style={styles.statValue}>{fmtDH(weekOut)}</Text>
+            <Text style={styles.statValue}>{fmtMoney(weekOut)}</Text>
           </View>
         </View>
+        {(bills.length > 0 || debtPctLeft !== null) && (
+          <View style={styles.metaRow}>
+            {bills.length > 0 && (
+              <View style={styles.metaChip}>
+                <Receipt size={15} color={colors.white} weight="fill" />
+                <Text style={styles.metaText}>
+                  {billsLeft === 0
+                    ? 'All bills paid'
+                    : `${billsLeft} of ${bills.length} bills left`}
+                </Text>
+              </View>
+            )}
+            {debtPctLeft !== null && (
+              <View style={styles.metaChip}>
+                <CreditCard size={15} color={colors.white} weight="fill" />
+                <Text style={styles.metaText}>
+                  {debtPctLeft === 0 ? 'Debt free!' : `${debtPctLeft}% debt left`}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
       </LinearGradient>
 
       <View style={styles.safeCard}>
@@ -111,12 +138,12 @@ export default function HomeScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.safeLabel}>Safe to spend today</Text>
           <Text style={[styles.safeValue, { color: safe >= 0 ? colors.green : colors.red }]}>
-            {fmtDHSigned(safe)}
+            {fmtMoneySigned(safe)}
           </Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={styles.safeBudgetLabel}>daily budget</Text>
-          <Text style={styles.safeBudgetValue}>{fmtDH(dailyBudget)}</Text>
+          <Text style={styles.safeBudgetValue}>{fmtMoney(dailyBudget)}</Text>
         </View>
       </View>
 
@@ -209,6 +236,17 @@ const styles = StyleSheet.create({
   statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statLabel: { ...type.tinyLabel, color: colors.white, opacity: 0.9 },
   statValue: { fontFamily: type.statValue.fontFamily, fontSize: 17, color: colors.white, marginTop: 3 },
+  metaRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  metaText: { fontFamily: fonts.extraBold, fontSize: 12.5, color: colors.white },
 
   safeCard: {
     marginTop: 14,

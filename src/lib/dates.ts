@@ -11,6 +11,11 @@ export function todayISO(): string {
   return toISO(new Date());
 }
 
+/** Local month as YYYY-MM (used for "paid this month" tracking). */
+export function monthISO(): string {
+  return todayISO().slice(0, 7);
+}
+
 /** ISO date `offset` days before today (offset 0 = today). */
 export function daysAgoISO(offset: number): string {
   const d = new Date();

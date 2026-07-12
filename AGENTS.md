@@ -13,7 +13,7 @@ Expo SDK 57 (React Native) + TypeScript + Expo Router. Docs for this exact SDK: 
 - `src/data/seed.ts` — sample data, dates generated relative to the real current day
 
 ## Conventions
-- Currency is Moroccan dirham, formatted by `fmtDH` ("3 200 DH" — space thousands, no decimals)
+- Currency is region-based (`src/data/currencies.ts`, chosen at sign-up / Account), formatted by `fmtMoney` ("3 200 DH", "$3 200" — space thousands, no decimals). Components showing amounts must subscribe to `settings.currency`
 - Dates are local-time ISO strings (YYYY-MM-DD) via helpers in `src/lib/dates.ts`
 - Nunito weights are separate font families (`fonts.bold` etc. in typography.ts) — never use `fontWeight`
 - `Tabs`/`BottomTabBarProps` come from `expo-router/js-tabs` (the plain `expo-router` export is deprecated in SDK 57)

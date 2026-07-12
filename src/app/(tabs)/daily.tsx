@@ -1,21 +1,13 @@
-import {
-  CheckCircle,
-  Confetti,
-  Smiley,
-  SmileyMeh,
-  SmileyNervous,
-  Warning,
-} from 'phosphor-react-native';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { CheckCircle, Confetti, Warning } from 'phosphor-react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { PocketPop } from '@/components/PocketPop';
 import { TransactionRow } from '@/components/TransactionRow';
 import { niceDate, todayISO } from '@/lib/dates';
-import { fmtDH } from '@/lib/format';
+import { fmtMoney } from '@/lib/format';
 import { getDailyBudget, getTodaySpent, getTodayTransactions } from '@/lib/selectors';
-import { Mood } from '@/lib/types';
 import { useFinanceStore } from '@/store/useFinanceStore';
 import { colors } from '@/theme/colors';
 import { fonts, type } from '@/theme/typography';
@@ -53,20 +45,12 @@ function ProgressRing({ pct }: { pct: number }) {
   );
 }
 
-const MOODS: { key: Mood; label: string; icon: typeof Smiley }[] = [
-  { key: 'great', label: 'Great', icon: Smiley },
-  { key: 'okay', label: 'Okay', icon: SmileyMeh },
-  { key: 'tight', label: 'Tight', icon: SmileyNervous },
-];
-
 export default function DailyScreen() {
   const insets = useSafeAreaInsets();
   const transactions = useFinanceStore((s) => s.transactions);
   const bills = useFinanceStore((s) => s.bills);
   const debts = useFinanceStore((s) => s.debts);
   const settings = useFinanceStore((s) => s.settings);
-  const mood = useFinanceStore((s) => s.mood);
-  const setMood = useFinanceStore((s) => s.setMood);
 
   const dailyBudget = getDailyBudget(settings, bills, debts);
   const todaySpent = getTodaySpent(transactions);
@@ -87,8 +71,8 @@ export default function DailyScreen() {
         <ProgressRing pct={pct} />
         <View style={styles.ringCenter}>
           <Text style={styles.ringLabel}>Spent today</Text>
-          <Text style={styles.ringValue}>{fmtDH(todaySpent)}</Text>
-          <Text style={styles.ringLabel}>of {fmtDH(dailyBudget)}</Text>
+          <Text style={styles.ringValue}>{fmtMoney(todaySpent)}</Text>
+          <Text style={styles.ringLabel}>of {fmtMoney(dailyBudget)}</Text>
         </View>
       </View>
 
@@ -106,26 +90,6 @@ export default function DailyScreen() {
           <Text style={[styles.pillText, { color: over ? colors.redDark : colors.greenDark }]}>
             {over ? 'Over your daily budget' : 'You’re on track'}
           </Text>
-        </View>
-      </View>
-
-      <View style={styles.moodCard}>
-        <Text style={styles.moodTitle}>How did today feel?</Text>
-        <View style={styles.moodRow}>
-          {MOODS.map((m) => {
-            const selected = mood === m.key;
-            const MoodIcon = m.icon;
-            const fg = selected ? colors.greenDark : colors.moodMuted;
-            return (
-              <Pressable
-                key={m.key}
-                onPress={() => setMood(m.key)}
-                style={[styles.moodBtn, selected && styles.moodBtnSelected]}>
-                <MoodIcon size={20} color={fg} weight="fill" />
-                <Text style={[styles.moodLabel, { color: fg }]}>{m.label}</Text>
-              </Pressable>
-            );
-          })}
         </View>
       </View>
 
@@ -168,30 +132,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   pillText: { fontFamily: fonts.extraBold, fontSize: 13 },
-
-  moodCard: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 20,
-    padding: 16,
-    marginTop: 14,
-  },
-  moodTitle: { ...type.cardLabel, color: colors.textPrimary },
-  moodRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  moodBtn: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: colors.borderChip,
-    backgroundColor: colors.card,
-  },
-  moodBtnSelected: { borderColor: colors.green, backgroundColor: colors.greenBgSoft },
-  moodLabel: { ...type.smallLabel },
 
   sectionTitle: {
     ...type.subsectionTitle,
