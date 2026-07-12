@@ -37,13 +37,14 @@ export default function WeeklyScreen() {
   const insets = useSafeAreaInsets();
   const tabClearance = useTabBarClearance();
   const transactions = useFinanceStore((s) => s.transactions);
+  const categories = useFinanceStore((s) => s.categories);
   // Subscribed so amounts re-format when the user changes region/currency.
   useFinanceStore((s) => s.settings.currency);
 
   const { weekIn, weekOut } = getWeekTotals(transactions);
   const bars = getWeekDayBars(transactions);
   const delta = getWeekDelta(transactions);
-  const topCats = getTopCategoriesThisWeek(transactions);
+  const topCats = getTopCategoriesThisWeek(transactions, categories);
   const weekStart = last7Days()[0];
 
   const months = getMonthsWithData(transactions);
@@ -144,14 +145,14 @@ export default function WeeklyScreen() {
         {topCats.map((c) => (
           <View key={c.key} style={styles.catCard}>
             <View style={styles.catRow}>
-              <View style={styles.catIconTile}>
-                <PhosphorIcon name={c.icon} size={18} color={colors.greenIconTileFg} />
+              <View style={[styles.catIconTile, { backgroundColor: `${c.color}1f` }]}>
+                <PhosphorIcon name={c.icon} size={18} color={c.color} />
               </View>
               <Text style={styles.catLabel}>{c.label}</Text>
               <Text style={styles.catAmount}>{fmtMoney(c.amount)}</Text>
             </View>
             <View style={styles.catTrack}>
-              <View style={[styles.catFill, { width: `${c.pct}%` }]} />
+              <View style={[styles.catFill, { width: `${c.pct}%`, backgroundColor: c.color }]} />
             </View>
           </View>
         ))}

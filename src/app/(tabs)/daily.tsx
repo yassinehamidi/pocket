@@ -10,8 +10,10 @@ import { TransactionRow } from '@/components/TransactionRow';
 import { niceDate, todayISO } from '@/lib/dates';
 import { fmtMoney } from '@/lib/format';
 import {
+  DaySegment,
   getDailyBudget,
   getDayHistory,
+  getTodayCategorySegments,
   getTodaySpent,
   getTodayTransactions,
 } from '@/lib/selectors';
@@ -22,10 +24,22 @@ import { fonts, type } from '@/theme/typography';
 const RING_SIZE = 196;
 const RING_STROKE = 23;
 
-function ProgressRing({ pct }: { pct: number }) {
+function ProgressRing({ pct, segments }: { pct: number; segments: DaySegment[] }) {
   const colors = useColors();
   const r = (RING_SIZE - RING_STROKE) / 2;
   const circumference = 2 * Math.PI * r;
+  const progress = (pct / 100) * circumference;
+  // Tiny gap between segments so adjacent category colors read as distinct.
+  const gap = segments.length > 1 ? 3 : 0;
+
+  let cursor = 0;
+  const arcs = segments.map((s) => {
+    const start = cursor;
+    const len = Math.max(0, progress * s.fraction - gap);
+    cursor += progress * s.fraction;
+    return { key: s.key, color: s.color, start, len };
+  });
+
   return (
     <Svg
       width={RING_SIZE}
@@ -39,16 +53,21 @@ function ProgressRing({ pct }: { pct: number }) {
         strokeWidth={RING_STROKE}
         fill="none"
       />
-      <Circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
-        r={r}
-        stroke={colors.green}
-        strokeWidth={RING_STROKE}
-        fill="none"
-        strokeDasharray={circumference}
-        strokeDashoffset={circumference * (1 - pct / 100)}
-      />
+      {arcs
+        .filter((a) => a.len > 0.5)
+        .map((a) => (
+          <Circle
+            key={a.key}
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={r}
+            stroke={a.color}
+            strokeWidth={RING_STROKE}
+            fill="none"
+            strokeDasharray={`${a.len} ${circumference - a.len}`}
+            strokeDashoffset={-a.start}
+          />
+        ))}
     </Svg>
   );
 }
@@ -63,9 +82,11 @@ export default function DailyScreen() {
   const debts = useFinanceStore((s) => s.debts);
   const settings = useFinanceStore((s) => s.settings);
 
+  const categories = useFinanceStore((s) => s.categories);
   const dailyBudget = getDailyBudget(settings, bills, debts);
   const todaySpent = getTodaySpent(transactions);
   const todayTx = getTodayTransactions(transactions);
+  const segments = getTodayCategorySegments(transactions, categories);
   const history = getDayHistory(transactions, { excludeToday: true });
   const pct = dailyBudget > 0 ? Math.min(100, Math.round((todaySpent / dailyBudget) * 100)) : 0;
   const over = todaySpent > dailyBudget;
@@ -80,7 +101,7 @@ export default function DailyScreen() {
       <Text style={styles.subtitle}>Today · {niceDate(todayISO())}</Text>
 
       <View style={styles.ringWrap}>
-        <ProgressRing pct={pct} />
+        <ProgressRing pct={pct} segments={segments} />
         <View style={styles.ringCenter}>
           <Text style={styles.ringLabel}>Spent today</Text>
           <Text style={styles.ringValue}>{fmtMoney(todaySpent)}</Text>

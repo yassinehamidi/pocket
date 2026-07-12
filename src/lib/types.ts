@@ -2,16 +2,12 @@
 
 export type TransactionType = 'in' | 'out';
 
-export type CategoryKey =
-  | 'food'
-  | 'transport'
-  | 'shopping'
-  | 'bills'
-  | 'fun'
-  | 'health'
-  | 'salary'
-  | 'freelance'
-  | 'gift';
+/**
+ * Built-in categories use readable keys ('food', 'salary', …); user-created
+ * ones get generated keys. Always resolve through getCategory() — a key may
+ * reference a category that no longer exists.
+ */
+export type CategoryKey = string;
 
 export interface Transaction {
   id: string;
@@ -29,6 +25,8 @@ export interface Category {
   /** Phosphor icon name (kebab-case, as in the design reference) */
   icon: string;
   kind: 'expense' | 'income';
+  /** Accent color (hex) used for icons, chips, and the daily ring segments. */
+  color: string;
 }
 
 export interface Bill {

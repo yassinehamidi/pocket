@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PhosphorIcon } from '@/components/PhosphorIcon';
-import { CATEGORIES } from '@/data/categories';
+import { getCategory } from '@/data/categories';
 import { friendlyDate } from '@/lib/dates';
 import { fmtMoney } from '@/lib/format';
 import { Transaction } from '@/lib/types';
@@ -20,12 +20,13 @@ export function TransactionRow({ tx, showDate = true }: Props) {
   useFinanceStore((s) => s.settings.currency);
   const colors = useColors();
   const styles = useStyles();
-  const cat = CATEGORIES[tx.category];
+  const categories = useFinanceStore((s) => s.categories);
+  const cat = getCategory(categories, tx.category);
   const isOut = tx.type === 'out';
   return (
     <View style={styles.row}>
-      <View style={styles.iconTile}>
-        <PhosphorIcon name={cat.icon} size={20} color={colors.greenIconTileFg} />
+      <View style={[styles.iconTile, { backgroundColor: `${cat.color}1f` }]}>
+        <PhosphorIcon name={cat.icon} size={20} color={cat.color} />
       </View>
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={1}>

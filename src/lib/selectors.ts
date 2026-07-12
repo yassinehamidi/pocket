@@ -1,6 +1,6 @@
-import { CATEGORIES } from '@/data/categories';
+import { getCategory } from '@/data/categories';
 import { billCycleISO, last7Days, previous7Days, todayISO, weekdayLabel } from '@/lib/dates';
-import { Bill, CategoryKey, Debt, Transaction, UserSettings } from '@/lib/types';
+import { Bill, Category, CategoryKey, Debt, Transaction, UserSettings } from '@/lib/types';
 
 /**
  * Derived values — computed from raw store data, never stored.
@@ -119,12 +119,17 @@ export interface TopCategory {
   key: CategoryKey;
   label: string;
   icon: string;
+  color: string;
   amount: number;
   /** Share of this week's spending, 0–100. */
   pct: number;
 }
 
-export function getTopCategoriesThisWeek(transactions: Transaction[], limit = 4): TopCategory[] {
+export function getTopCategoriesThisWeek(
+  transactions: Transaction[],
+  categories: Category[],
+  limit = 4,
+): TopCategory[] {
   const week = last7Days();
   const totals = new Map<CategoryKey, number>();
   for (const t of transactions) {
@@ -135,12 +140,47 @@ export function getTopCategoriesThisWeek(transactions: Transaction[], limit = 4)
   return [...totals.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
+    .map(([key, amount]) => {
+      const cat = getCategory(categories, key);
+      return {
+        key,
+        label: cat.label,
+        icon: cat.icon,
+        color: cat.color,
+        amount,
+        pct: Math.round((amount / (weekOut || 1)) * 100),
+      };
+    });
+}
+
+export interface DaySegment {
+  key: CategoryKey;
+  color: string;
+  amount: number;
+  /** Share of today's spending, 0–1. */
+  fraction: number;
+}
+
+/** Today's spending grouped by category — drives the colored daily ring. */
+export function getTodayCategorySegments(
+  transactions: Transaction[],
+  categories: Category[],
+): DaySegment[] {
+  const today = todayISO();
+  const totals = new Map<CategoryKey, number>();
+  for (const t of transactions) {
+    if (t.type !== 'out' || t.date !== today) continue;
+    totals.set(t.category, (totals.get(t.category) ?? 0) + t.amount);
+  }
+  const total = [...totals.values()].reduce((a, v) => a + v, 0);
+  if (total <= 0) return [];
+  return [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
     .map(([key, amount]) => ({
       key,
-      label: CATEGORIES[key].label,
-      icon: CATEGORIES[key].icon,
+      color: getCategory(categories, key).color,
       amount,
-      pct: Math.round((amount / (weekOut || 1)) * 100),
+      fraction: amount / total,
     }));
 }
 

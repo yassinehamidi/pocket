@@ -1,6 +1,6 @@
 # Pocket — personal finance tracker
 
-Expo SDK 57 (React Native) + TypeScript + Expo Router. Docs for this exact SDK: https://docs.expo.dev/versions/v57.0.0/
+Expo SDK 54 (React Native) + TypeScript + Expo Router. Docs for this exact SDK: https://docs.expo.dev/versions/v54.0.0/
 
 ## Layout
 - `src/app/` — Expo Router routes guarded in `_layout.tsx` by `Stack.Protected`: `onboarding` (first launch) → `(auth)/` (`sign-up`, `log-in`) → app: `(tabs)/` (Home `index`, `daily`, `weekly`, `budget`), modals `add`, `new-bill`, `new-debt`, pushed `settings` (gear icon) and `account` (avatar)
@@ -16,7 +16,7 @@ Expo SDK 57 (React Native) + TypeScript + Expo Router. Docs for this exact SDK: 
 - Currency is region-based (`src/data/currencies.ts`, chosen at sign-up / Account), formatted by `fmtMoney` ("3 200 DH", "$3 200" — space thousands, no decimals). Components showing amounts must subscribe to `settings.currency`
 - Dates are local-time ISO strings (YYYY-MM-DD) via helpers in `src/lib/dates.ts`
 - Nunito weights are separate font families (`fonts.bold` etc. in typography.ts) — never use `fontWeight`
-- `Tabs`/`BottomTabBarProps` come from `expo-router/js-tabs` (the plain `expo-router` export is deprecated in SDK 57)
+- Tab bar is platform-split in `(tabs)/_layout.tsx`: iOS uses `NativeTabs` from `expo-router/unstable-native-tabs` (real system bar, Liquid Glass on iOS 26; SF Symbol icons; the "+" is the floating `AddFab`), Android/web use the JS `Tabs` from `expo-router` with the custom `TabBar`. `BottomTabBarProps` from `@react-navigation/bottom-tabs`; navigation theming (`ThemeProvider`, `DarkTheme`) from `@react-navigation/native`
 - `design-reference.html` is the pixel source of truth for all five screens
 
 ## Commands

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PhosphorIcon } from '@/components/PhosphorIcon';
-import { CATEGORIES } from '@/data/categories';
+import { getCategory } from '@/data/categories';
 import { friendlyDate, weekdayLabel } from '@/lib/dates';
 import { fmtMoney } from '@/lib/format';
 import { DayHistory } from '@/lib/selectors';
@@ -19,6 +19,7 @@ interface Props {
 export function DayHistoryCard({ day }: Props) {
   // Subscribed so amounts re-format when the user changes region/currency.
   useFinanceStore((s) => s.settings.currency);
+  const categories = useFinanceStore((s) => s.categories);
   const colors = useColors();
   const styles = useStyles();
   const [open, setOpen] = useState(false);
@@ -60,12 +61,12 @@ export function DayHistoryCard({ day }: Props) {
       {open && (
         <View style={styles.txList}>
           {day.transactions.map((tx) => {
-            const cat = CATEGORIES[tx.category];
+            const cat = getCategory(categories, tx.category);
             const isOut = tx.type === 'out';
             return (
               <View key={tx.id} style={styles.txRow}>
-                <View style={styles.txIconTile}>
-                  <PhosphorIcon name={cat.icon} size={16} color={colors.greenIconTileFg} />
+                <View style={[styles.txIconTile, { backgroundColor: `${cat.color}1f` }]}>
+                  <PhosphorIcon name={cat.icon} size={16} color={cat.color} />
                 </View>
                 <View style={styles.txBody}>
                   <Text style={styles.txTitle} numberOfLines={1}>

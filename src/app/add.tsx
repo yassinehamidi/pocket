@@ -7,6 +7,7 @@ import {
   Backspace,
   CheckCircle,
   NotePencil,
+  Plus,
   X,
 } from 'phosphor-react-native';
 import { useState } from 'react';
@@ -20,12 +21,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CategorySheet } from '@/components/CategorySheet';
 import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { PocketPop } from '@/components/PocketPop';
-import { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/data/categories';
+import { getCategory } from '@/data/categories';
 import { niceDate, todayISO } from '@/lib/dates';
 import { currencySymbol } from '@/lib/format';
-import { CategoryKey, TransactionType } from '@/lib/types';
+import { Category, CategoryKey, TransactionType } from '@/lib/types';
 import { useFinanceStore } from '@/store/useFinanceStore';
 import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
@@ -38,18 +40,23 @@ export default function AddScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const addTransaction = useFinanceStore((s) => s.addTransaction);
+  const categories = useFinanceStore((s) => s.categories);
 
   const [txType, setTxType] = useState<TransactionType>('out');
   const [amount, setAmount] = useState('0');
   const [category, setCategory] = useState<CategoryKey>('food');
   const [reason, setReason] = useState('');
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editingCat, setEditingCat] = useState<Category | null>(null);
 
   const isOut = txType === 'out';
-  const chips = isOut ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  const kind = isOut ? ('expense' as const) : ('income' as const);
+  const chips = categories.filter((c) => c.kind === kind);
 
   const switchType = (t: TransactionType) => {
     setTxType(t);
-    setCategory(t === 'out' ? 'food' : 'salary');
+    const first = categories.find((c) => c.kind === (t === 'out' ? 'expense' : 'income'));
+    setCategory(first?.key ?? '');
   };
 
   const press = (key: string) => {
@@ -72,7 +79,7 @@ export default function AddScreen() {
         type: txType,
         amount: amt,
         category,
-        reason: reason.trim() || CATEGORIES[category].label,
+        reason: reason.trim() || getCategory(categories, category).label,
         date: todayISO(),
       });
     }
@@ -127,30 +134,43 @@ export default function AddScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.chipsRow}>
-        {chips.map((key) => {
-          const selected = key === category;
-          const cat = CATEGORIES[key];
+        {chips.map((cat) => {
+          const selected = cat.key === category;
           return (
             <Pressable
-              key={key}
-              onPress={() => setCategory(key)}
-              style={[styles.chip, selected && styles.chipSelected]}>
+              key={cat.key}
+              onPress={() => setCategory(cat.key)}
+              onLongPress={() => {
+                setEditingCat(cat);
+                setSheetOpen(true);
+              }}
+              style={[
+                styles.chip,
+                selected && { borderColor: cat.color, backgroundColor: `${cat.color}1f` },
+              ]}>
               <PhosphorIcon
                 name={cat.icon}
                 size={21}
-                color={selected ? colors.greenDark : colors.textBody}
+                color={selected ? cat.color : colors.textBody}
               />
               <Text
-                style={[
-                  styles.chipLabel,
-                  { color: selected ? colors.greenDark : colors.textBody },
-                ]}>
+                style={[styles.chipLabel, { color: selected ? cat.color : colors.textBody }]}>
                 {cat.label}
               </Text>
             </Pressable>
           );
         })}
+        <Pressable
+          onPress={() => {
+            setEditingCat(null);
+            setSheetOpen(true);
+          }}
+          style={[styles.chip, styles.chipAdd]}>
+          <Plus size={21} color={colors.textMuted} />
+          <Text style={[styles.chipLabel, { color: colors.textMuted }]}>New</Text>
+        </Pressable>
       </ScrollView>
+      <Text style={styles.chipHint}>Hold a category to change its color or icon</Text>
 
       <View style={styles.reasonCard}>
         <NotePencil size={19} color={colors.textMuted} />
@@ -185,6 +205,14 @@ export default function AddScreen() {
           <Text style={styles.saveText}>Save transaction</Text>
         </LinearGradient>
       </Pressable>
+
+      <CategorySheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        kind={kind}
+        editing={editingCat}
+        onSaved={(key) => setCategory(key)}
+      />
     </ScrollView>
     </PocketPop>
   );
@@ -255,8 +283,15 @@ const useStyles = themedStyles((colors) => StyleSheet.create({
     borderColor: colors.borderChip,
     backgroundColor: colors.card,
   },
-  chipSelected: { borderColor: colors.green, backgroundColor: colors.greenBgSoft },
+  chipAdd: { borderStyle: 'dashed', borderColor: colors.dashedBorder },
   chipLabel: { ...type.tinyLabel },
+  chipHint: {
+    ...type.rowSubtitle,
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: 2,
+  },
 
   reasonCard: {
     marginTop: 12,

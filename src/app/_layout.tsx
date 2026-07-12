@@ -5,13 +5,16 @@ import {
   Nunito_900Black,
   useFonts,
 } from '@expo-google-fonts/nunito';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect, useMemo } from 'react';
+import { Appearance } from 'react-native';
 
 import { useAuthStore } from '@/store/useAuthStore';
+import { useFinanceStore } from '@/store/useFinanceStore';
 import { useColors, useScheme } from '@/theme/useTheme';
 
 SplashScreen.preventAutoHideAsync();
@@ -28,12 +31,21 @@ export default function RootLayout() {
   const session = useAuthStore((s) => s.session);
   const colors = useColors();
   const scheme = useScheme();
+  const themeMode = useFinanceStore((s) => s.settings.themeMode);
 
   const ready = fontsLoaded && hasHydrated;
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
+
+  // Push the in-app theme choice down to the OS (overrideUserInterfaceStyle):
+  // native chrome — the system tab bar, Liquid Glass, alerts, keyboards —
+  // follows the phone's appearance otherwise, which made the native tab
+  // container flash white and the glass bar ignore the in-app toggle.
+  useEffect(() => {
+    Appearance.setColorScheme?.(themeMode === 'system' ? null : themeMode);
+  }, [themeMode]);
 
   // Navigators paint their own background between screens; without a matching
   // theme the defaults (white) flash through on every transition in dark mode.

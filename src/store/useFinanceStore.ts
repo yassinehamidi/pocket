@@ -2,12 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { DEFAULT_CATEGORIES } from '@/data/categories';
 import { DEFAULT_CURRENCY, DEFAULT_REGION, getRegion } from '@/data/currencies';
 import { seedBills, seedDebts, seedSettings, seedTransactions } from '@/data/seed';
 import { billCycleISO, todayISO } from '@/lib/dates';
 import { setActiveCurrency } from '@/lib/format';
 import {
   Bill,
+  Category,
   CategoryKey,
   Debt,
   ThemeMode,
@@ -31,8 +33,22 @@ interface FinanceState {
   transactions: Transaction[];
   bills: Bill[];
   debts: Debt[];
+  /** All categories — built-in defaults plus user-created ones. */
+  categories: Category[];
   settings: UserSettings;
 
+  /** Creates a category and returns its generated key. */
+  addCategory: (input: {
+    label: string;
+    icon: string;
+    color: string;
+    kind: 'expense' | 'income';
+  }) => string;
+  /** Updates a category's label, icon, or color (built-in or custom). */
+  updateCategory: (
+    key: CategoryKey,
+    patch: Partial<Pick<Category, 'label' | 'icon' | 'color'>>,
+  ) => void;
   addTransaction: (tx: {
     type: TransactionType;
     amount: number;
@@ -79,7 +95,19 @@ export const useFinanceStore = create<FinanceState>()(
       transactions: [],
       bills: [],
       debts: [],
+      categories: DEFAULT_CATEGORIES,
       settings: FRESH_SETTINGS,
+
+      addCategory: (input) => {
+        const key = `c${Date.now()}`;
+        set((s) => ({ categories: [...s.categories, { key, ...input }] }));
+        return key;
+      },
+
+      updateCategory: (key, patch) =>
+        set((s) => ({
+          categories: s.categories.map((c) => (c.key === key ? { ...c, ...patch } : c)),
+        })),
 
       addTransaction: (tx) =>
         set((s) => ({
@@ -193,6 +221,12 @@ export const useFinanceStore = create<FinanceState>()(
           transactions: seedTransactions,
           bills: seedBills,
           debts: seedDebts,
+          // Sample data uses built-in category keys — restore any the user is
+          // missing, but keep their customs and color edits.
+          categories: [
+            ...s.categories,
+            ...DEFAULT_CATEGORIES.filter((d) => !s.categories.some((c) => c.key === d.key)),
+          ],
           settings: {
             ...seedSettings,
             userName: s.settings.userName || seedSettings.userName,
@@ -207,6 +241,7 @@ export const useFinanceStore = create<FinanceState>()(
           transactions: [],
           bills: [],
           debts: [],
+          categories: DEFAULT_CATEGORIES,
           settings: {
             ...FRESH_SETTINGS,
             userName: s.settings.userName,
@@ -219,17 +254,22 @@ export const useFinanceStore = create<FinanceState>()(
     {
       name: 'pocket-finance',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 4,
+      version: 5,
       migrate: (persisted: unknown) => {
         // v0 → v1: settings gained region/currency.
         // v1 → v2: debts gained originalTotal (assume current total).
         // v2 → v3: bills gained dueDay (assume the 1st), debts gained payments.
         // v3 → v4: settings gained themeMode (defaults to "system" via FRESH_SETTINGS).
+        // v4 → v5: categories moved into the store (colored, user-editable).
         const state = persisted as {
           settings?: Partial<UserSettings>;
           bills?: Bill[];
           debts?: Debt[];
+          categories?: Category[];
         };
+        if (!state.categories || state.categories.length === 0) {
+          state.categories = DEFAULT_CATEGORIES;
+        }
         if (state?.settings) {
           state.settings = { ...FRESH_SETTINGS, ...state.settings };
         }
@@ -249,6 +289,7 @@ export const useFinanceStore = create<FinanceState>()(
         transactions: s.transactions,
         bills: s.bills,
         debts: s.debts,
+        categories: s.categories,
         settings: s.settings,
       }),
       onRehydrateStorage: () => (state) => {
