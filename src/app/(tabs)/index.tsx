@@ -13,6 +13,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PocketPop } from '@/components/PocketPop';
+import { useTabBarClearance } from '@/components/TabBar';
 import { TransactionRow } from '@/components/TransactionRow';
 import { currencySymbol, fmtMoney, fmtMoneySigned } from '@/lib/format';
 import {
@@ -26,7 +27,7 @@ import {
 } from '@/lib/selectors';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFinanceStore } from '@/store/useFinanceStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
 
 function greetingForNow(): string {
@@ -37,7 +38,10 @@ function greetingForNow(): string {
 }
 
 export default function HomeScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
+  const tabClearance = useTabBarClearance();
   const router = useRouter();
   const transactions = useFinanceStore((s) => s.transactions);
   const bills = useFinanceStore((s) => s.bills);
@@ -58,7 +62,7 @@ export default function HomeScreen() {
     <PocketPop>
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: tabClearance }]}
       showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <View>
@@ -171,7 +175,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 20, paddingBottom: 32 },
   header: {
@@ -300,4 +304,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
-});
+}));

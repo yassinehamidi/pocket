@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { type } from '@/theme/typography';
 
 interface Props {
@@ -15,6 +15,8 @@ interface Props {
 
 /** The green gradient CTA used across the app (save, sign up, get started…). */
 export function PrimaryButton({ label, onPress, icon, loading, disabled }: Props) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Pressable onPress={onPress} disabled={disabled || loading}>
       <LinearGradient
@@ -35,7 +37,7 @@ export function PrimaryButton({ label, onPress, icon, loading, disabled }: Props
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   btn: {
     height: 54,
     borderRadius: 18,
@@ -50,4 +52,4 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   label: { ...type.sectionTitle, color: colors.white },
-});
+}));

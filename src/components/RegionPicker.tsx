@@ -4,7 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CURRENCIES, getRegion, REGIONS } from '@/data/currencies';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
 
 interface Props {
@@ -17,6 +17,8 @@ interface Props {
 /** Region select field: shows flag + country + currency, opens a modal list. */
 export function RegionPicker({ label, value, onChange }: Props) {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
+  const styles = useStyles();
   const [open, setOpen] = useState(false);
   const selected = getRegion(value);
   const selectedCurrency = CURRENCIES[selected.currency];
@@ -78,7 +80,7 @@ export function RegionPicker({ label, value, onChange }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   wrap: { gap: 6 },
   label: { ...type.smallLabel, color: colors.textBody, marginLeft: 4 },
   field: {
@@ -137,4 +139,4 @@ const styles = StyleSheet.create({
   rowSelected: { backgroundColor: colors.greenBgSoft },
   rowLabel: { ...type.rowTitle, color: colors.textPrimary },
   rowCurrency: { ...type.rowSubtitle, color: colors.textMuted },
-});
+}));

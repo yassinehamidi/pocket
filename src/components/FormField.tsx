@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { KeyboardTypeOptions, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
 
 interface Props {
@@ -28,6 +28,8 @@ export function FormField({
   keyboardType,
   autoCapitalize = 'sentences',
 }: Props) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
@@ -49,7 +51,7 @@ export function FormField({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   wrap: { gap: 6 },
   label: { ...type.smallLabel, color: colors.textBody, marginLeft: 4 },
   field: {
@@ -72,4 +74,4 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   error: { ...type.rowSubtitle, color: colors.redDark, marginLeft: 4 },
-});
+}));

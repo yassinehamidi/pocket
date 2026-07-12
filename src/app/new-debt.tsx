@@ -19,12 +19,14 @@ import { PocketPop } from '@/components/PocketPop';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { currencySymbol, fmtMoney } from '@/lib/format';
 import { useFinanceStore } from '@/store/useFinanceStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { type } from '@/theme/typography';
 
 const DEBT_ICONS = ['car', 'credit-card', 'house', 'bank'] as const;
 
 export default function NewDebtScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const addDebt = useFinanceStore((s) => s.addDebt);
@@ -139,7 +141,7 @@ export default function NewDebtScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 20 },
   header: {
@@ -185,4 +187,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconChipSelected: { borderColor: colors.green, backgroundColor: colors.greenBgSoft },
-});
+}));

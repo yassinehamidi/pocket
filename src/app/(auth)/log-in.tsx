@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,13 +16,16 @@ import { FormField } from '@/components/FormField';
 import { PocketPop } from '@/components/PocketPop';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useAuthStore } from '@/store/useAuthStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
 
 export default function LogInScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const logIn = useAuthStore((s) => s.logIn);
   const account = useAuthStore((s) => s.account);
+  const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -95,13 +99,17 @@ export default function LogInScreen() {
             Create an account
           </Link>
         </View>
+
+        <Pressable style={styles.skipBtn} onPress={continueAsGuest}>
+          <Text style={styles.skipText}>Skip for now</Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
     </PocketPop>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 24 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 28 },
@@ -120,4 +128,6 @@ const styles = StyleSheet.create({
   switchRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 18 },
   switchText: { ...type.cardLabel, color: colors.textBody },
   switchLink: { ...type.cardLabel, color: colors.green },
-});
+  skipBtn: { alignItems: 'center', marginTop: 14, paddingVertical: 6 },
+  skipText: { ...type.cardLabel, color: colors.textMuted },
+}));

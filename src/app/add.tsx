@@ -27,12 +27,14 @@ import { niceDate, todayISO } from '@/lib/dates';
 import { currencySymbol } from '@/lib/format';
 import { CategoryKey, TransactionType } from '@/lib/types';
 import { useFinanceStore } from '@/store/useFinanceStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back'] as const;
 
 export default function AddScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const addTransaction = useFinanceStore((s) => s.addTransaction);
@@ -188,7 +190,7 @@ export default function AddScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 20 },
   header: {
@@ -311,4 +313,4 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   saveText: { ...type.sectionTitle, color: colors.white },
-});
+}));

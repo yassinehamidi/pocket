@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useAuthStore } from '@/store/useAuthStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
 
 interface Slide {
@@ -67,6 +67,8 @@ const SLIDES: Slide[] = [
 ];
 
 export default function OnboardingScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
@@ -188,7 +190,7 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   topRow: {
     flexDirection: 'row',
@@ -243,4 +245,4 @@ const styles = StyleSheet.create({
   },
 
   footer: { paddingHorizontal: 24 },
-});
+}));

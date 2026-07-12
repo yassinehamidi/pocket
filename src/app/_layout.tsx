@@ -5,13 +5,14 @@ import {
   Nunito_900Black,
   useFonts,
 } from '@expo-google-fonts/nunito';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import * as SystemUI from 'expo-system-ui';
+import { useEffect, useMemo } from 'react';
 
 import { useAuthStore } from '@/store/useAuthStore';
-import { colors } from '@/theme/colors';
+import { useColors, useScheme } from '@/theme/useTheme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,6 +26,8 @@ export default function RootLayout() {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const hasOnboarded = useAuthStore((s) => s.hasOnboarded);
   const session = useAuthStore((s) => s.session);
+  const colors = useColors();
+  const scheme = useScheme();
 
   const ready = fontsLoaded && hasHydrated;
 
@@ -32,11 +35,33 @@ export default function RootLayout() {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
 
+  // Navigators paint their own background between screens; without a matching
+  // theme the defaults (white) flash through on every transition in dark mode.
+  const navTheme = useMemo(() => {
+    const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: colors.green,
+        background: colors.background,
+        card: colors.background,
+        text: colors.textPrimary,
+        border: colors.border,
+      },
+    };
+  }, [scheme, colors]);
+
+  // The native root view also shows through for a frame on screen changes.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(colors.background);
+  }, [colors.background]);
+
   if (!ready) return null;
 
   return (
-    <>
-      <StatusBar style="dark" />
+    <ThemeProvider value={navTheme}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -57,6 +82,6 @@ export default function RootLayout() {
           <Stack.Screen name="account" />
         </Stack.Protected>
       </Stack>
-    </>
+    </ThemeProvider>
   );
 }

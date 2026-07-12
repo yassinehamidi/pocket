@@ -1,31 +1,41 @@
 import {
   ArrowCircleDown,
   ArrowCircleUp,
+  CaretLeft,
+  CaretRight,
   ChartBar,
   TrendDown,
   TrendUp,
 } from 'phosphor-react-native';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DayHistoryCard } from '@/components/DayHistoryCard';
 import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { PocketPop } from '@/components/PocketPop';
-import { last7Days, niceDate, todayISO } from '@/lib/dates';
+import { useTabBarClearance } from '@/components/TabBar';
+import { last7Days, monthLabel, niceDate, todayISO } from '@/lib/dates';
 import { fmtMoney } from '@/lib/format';
 import {
+  getMonthHistory,
+  getMonthsWithData,
   getTopCategoriesThisWeek,
   getWeekDayBars,
   getWeekDelta,
   getWeekTotals,
 } from '@/lib/selectors';
 import { useFinanceStore } from '@/store/useFinanceStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
 
 const MAX_BAR_HEIGHT = 118;
 
 export default function WeeklyScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
+  const tabClearance = useTabBarClearance();
   const transactions = useFinanceStore((s) => s.transactions);
   // Subscribed so amounts re-format when the user changes region/currency.
   useFinanceStore((s) => s.settings.currency);
@@ -36,11 +46,18 @@ export default function WeeklyScreen() {
   const topCats = getTopCategoriesThisWeek(transactions);
   const weekStart = last7Days()[0];
 
+  const months = getMonthsWithData(transactions);
+  const [pickedMonth, setPickedMonth] = useState<string | null>(null);
+  // Fall back to the latest month when nothing is picked or the pick has no data anymore.
+  const month = pickedMonth && months.includes(pickedMonth) ? pickedMonth : months[0];
+  const monthIdx = month ? months.indexOf(month) : -1;
+  const monthHistory = month ? getMonthHistory(transactions, month) : null;
+
   return (
     <PocketPop>
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: tabClearance }]}
       showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Weekly check</Text>
       <Text style={styles.subtitle}>
@@ -139,12 +156,52 @@ export default function WeeklyScreen() {
           </View>
         ))}
       </View>
+
+      <Text style={styles.sectionTitle}>Monthly history</Text>
+      {month && monthHistory ? (
+        <>
+          <View style={styles.monthPicker}>
+            <Pressable
+              style={[styles.monthBtn, monthIdx >= months.length - 1 && styles.monthBtnDisabled]}
+              disabled={monthIdx >= months.length - 1}
+              onPress={() => setPickedMonth(months[monthIdx + 1])}>
+              <CaretLeft size={16} color={colors.textSecondary} weight="bold" />
+            </Pressable>
+            <View style={styles.monthLabelWrap}>
+              <Text style={styles.monthLabel}>{monthLabel(month)}</Text>
+              <Text style={styles.monthTotals}>
+                <Text style={{ color: colors.green }}>+{fmtMoney(monthHistory.monthIn)}</Text>
+                {'   '}
+                <Text style={{ color: colors.red }}>-{fmtMoney(monthHistory.monthOut)}</Text>
+              </Text>
+            </View>
+            <Pressable
+              style={[styles.monthBtn, monthIdx <= 0 && styles.monthBtnDisabled]}
+              disabled={monthIdx <= 0}
+              onPress={() => setPickedMonth(months[monthIdx - 1])}>
+              <CaretRight size={16} color={colors.textSecondary} weight="bold" />
+            </Pressable>
+          </View>
+          <View style={styles.dayList}>
+            {monthHistory.days.map((day) => (
+              <DayHistoryCard key={day.date} day={day} />
+            ))}
+          </View>
+        </>
+      ) : (
+        <View style={styles.emptyCard}>
+          <ChartBar size={30} color={colors.textMuted} />
+          <Text style={styles.emptyText}>
+            No history yet — every month you track will be browsable here.
+          </Text>
+        </View>
+      )}
     </ScrollView>
     </PocketPop>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 20, paddingBottom: 32 },
   title: { ...type.screenTitle, color: colors.textPrimary, marginTop: 6, marginHorizontal: 2 },
@@ -242,6 +299,35 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   catFill: { height: '100%', borderRadius: 4, backgroundColor: colors.green },
+
+  monthPicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    marginBottom: 11,
+  },
+  monthBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthBtnDisabled: { opacity: 0.35 },
+  monthLabelWrap: { alignItems: 'center', gap: 2 },
+  monthLabel: { ...type.rowTitle, color: colors.textPrimary },
+  monthTotals: { ...type.smallLabel },
+  dayList: { gap: 11 },
+
   emptyCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
@@ -257,4 +343,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-});
+}));

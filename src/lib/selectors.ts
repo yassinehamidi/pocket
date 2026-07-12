@@ -1,5 +1,5 @@
 import { CATEGORIES } from '@/data/categories';
-import { last7Days, monthISO, previous7Days, todayISO, weekdayLabel } from '@/lib/dates';
+import { billCycleISO, last7Days, previous7Days, todayISO, weekdayLabel } from '@/lib/dates';
 import { Bill, CategoryKey, Debt, Transaction, UserSettings } from '@/lib/types';
 
 /**
@@ -30,10 +30,14 @@ export function getTotalDebtMonthly(debts: Debt[]): number {
   return debts.reduce((a, d) => a + d.monthly, 0);
 }
 
-/** How many bills haven't been marked paid this month. */
+/** Whether a bill is paid for its current billing cycle (resets on its due day). */
+export function isBillPaid(bill: Bill): boolean {
+  return bill.lastPaidMonth === billCycleISO(bill.dueDay);
+}
+
+/** How many bills haven't been marked paid for their current cycle. */
 export function getBillsLeft(bills: Bill[]): number {
-  const month = monthISO();
-  return bills.filter((b) => b.lastPaidMonth !== month).length;
+  return bills.filter((b) => !isBillPaid(b)).length;
 }
 
 /** Percentage (0–100) of total debt still owed, or null when there is no debt history. */
@@ -151,4 +155,93 @@ export function getRecentTransactions(transactions: Transaction[], limit = 10): 
 export function getTodayTransactions(transactions: Transaction[]): Transaction[] {
   const today = todayISO();
   return transactions.filter((t) => t.date === today);
+}
+
+export interface DayHistory {
+  date: string;
+  spent: number;
+  received: number;
+  transactions: Transaction[];
+}
+
+/** Every documented day, newest first, with per-day totals. */
+export function getDayHistory(
+  transactions: Transaction[],
+  opts?: { excludeToday?: boolean },
+): DayHistory[] {
+  const byDay = new Map<string, Transaction[]>();
+  for (const t of transactions) {
+    const list = byDay.get(t.date) ?? [];
+    list.push(t);
+    byDay.set(t.date, list);
+  }
+  const today = todayISO();
+  return [...byDay.entries()]
+    .filter(([date]) => !(opts?.excludeToday && date === today))
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([date, txs]) => ({
+      date,
+      spent: txs.filter((t) => t.type === 'out').reduce((a, t) => a + t.amount, 0),
+      received: txs.filter((t) => t.type === 'in').reduce((a, t) => a + t.amount, 0),
+      transactions: txs,
+    }));
+}
+
+/** Months (YYYY-MM) that have at least one transaction, newest first. */
+export function getMonthsWithData(transactions: Transaction[]): string[] {
+  return [...new Set(transactions.map((t) => t.date.slice(0, 7)))].sort().reverse();
+}
+
+export interface MonthHistory {
+  monthIn: number;
+  monthOut: number;
+  days: DayHistory[];
+}
+
+export interface BudgetMonthHistory {
+  month: string;
+  /** Actually saved that month: income − spending (can be negative). */
+  saved: number;
+  /** Sum of debt payments recorded that month. */
+  debtPaid: number;
+}
+
+/**
+ * Month-by-month savings and debt-payment history, newest first.
+ * Months come from both transactions and recorded debt payments.
+ */
+export function getBudgetMonthHistory(
+  transactions: Transaction[],
+  debts: Debt[],
+): BudgetMonthHistory[] {
+  const payments = debts.flatMap((d) => d.payments);
+  const months = new Set<string>([
+    ...transactions.map((t) => t.date.slice(0, 7)),
+    ...payments.map((p) => p.date.slice(0, 7)),
+  ]);
+  return [...months]
+    .sort()
+    .reverse()
+    .map((month) => {
+      const inMonth = transactions.filter((t) => t.date.startsWith(month));
+      const monthIn = inMonth.filter((t) => t.type === 'in').reduce((a, t) => a + t.amount, 0);
+      const monthOut = inMonth.filter((t) => t.type === 'out').reduce((a, t) => a + t.amount, 0);
+      return {
+        month,
+        saved: monthIn - monthOut,
+        debtPaid: payments
+          .filter((p) => p.date.startsWith(month))
+          .reduce((a, p) => a + p.amount, 0),
+      };
+    });
+}
+
+/** Totals and day-by-day history for one month (YYYY-MM). */
+export function getMonthHistory(transactions: Transaction[], month: string): MonthHistory {
+  const inMonth = transactions.filter((t) => t.date.startsWith(month));
+  return {
+    monthIn: inMonth.filter((t) => t.type === 'in').reduce((a, t) => a + t.amount, 0),
+    monthOut: inMonth.filter((t) => t.type === 'out').reduce((a, t) => a + t.amount, 0),
+    days: getDayHistory(inMonth),
+  };
 }

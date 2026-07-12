@@ -1,12 +1,13 @@
 import { Stack } from 'expo-router';
 
 import { useAuthStore } from '@/store/useAuthStore';
-import { colors } from '@/theme/colors';
+import { useColors } from '@/theme/useTheme';
 
 export default function AuthLayout() {
   // If an account already exists on this device, land on log-in;
   // otherwise start with sign-up.
   const hasAccount = useAuthStore((s) => s.account !== null);
+  const colors = useColors();
   return (
     <Stack
       initialRouteName={hasAccount ? 'log-in' : 'sign-up'}

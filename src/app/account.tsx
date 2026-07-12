@@ -28,10 +28,12 @@ import { confirmAction } from '@/lib/confirm';
 import { fmtMoney } from '@/lib/format';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFinanceStore } from '@/store/useFinanceStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
 
 export default function AccountScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const account = useAuthStore((s) => s.account);
@@ -55,7 +57,32 @@ export default function AccountScreen() {
   const [saved, setSaved] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (!account) return null;
+  if (!account) {
+    return (
+      <PocketPop>
+        <View style={[styles.screen, styles.guestScreen, { paddingTop: insets.top + 8 }]}>
+          <View style={styles.header}>
+            <Pressable style={styles.backBtn} onPress={() => dismissScreen(router)}>
+              <CaretLeft size={18} color={colors.textSecondary} />
+            </Pressable>
+            <Text style={styles.title}>Account</Text>
+            <View style={{ width: 38 }} />
+          </View>
+          <View style={styles.guestBody}>
+            <Text style={[styles.profileName, styles.guestText]}>
+              You're browsing as a guest
+            </Text>
+            <Text style={[styles.profileEmail, styles.guestText]}>
+              Create an account to keep your data backed up and password-protected.
+            </Text>
+            <View style={styles.guestBtn}>
+              <PrimaryButton label="Create an account" onPress={logOut} />
+            </View>
+          </View>
+        </View>
+      </PocketPop>
+    );
+  }
 
   const flash = (msg: string) => {
     setSaved(msg);
@@ -226,7 +253,7 @@ export default function AccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 20, paddingBottom: 40 },
   header: {
@@ -247,6 +274,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: { ...type.screenTitle, color: colors.textPrimary },
+
+  guestScreen: { paddingHorizontal: 20 },
+  guestBody: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingBottom: 80 },
+  guestText: { textAlign: 'center' },
+  guestBtn: { width: '100%', marginTop: 10 },
 
   profileCard: { alignItems: 'center', marginBottom: 18 },
   bigAvatar: {
@@ -299,4 +331,4 @@ const styles = StyleSheet.create({
   },
   dangerRowTitle: { ...type.rowTitle, color: colors.textPrimary },
   divider: { height: 1, backgroundColor: colors.divider },
-});
+}));

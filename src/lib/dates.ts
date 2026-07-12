@@ -38,6 +38,29 @@ export function friendlyDate(iso: string): string {
   return niceDate(iso);
 }
 
+/**
+ * Current billing cycle (YYYY-MM) for a bill due on `dueDay` of each month:
+ * the month of the most recent due date. Before the due day the cycle is
+ * still last month's, so a bill marked paid stays paid until its next due
+ * date instead of resetting on the 1st.
+ */
+export function billCycleISO(dueDay: number): string {
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const due = Math.min(Math.max(1, dueDay), daysInMonth);
+  const cycle = new Date(now.getFullYear(), now.getMonth(), 1);
+  if (now.getDate() < due) cycle.setMonth(cycle.getMonth() - 1);
+  return toISO(cycle).slice(0, 7);
+}
+
+/** "July 2026" from a YYYY-MM string. */
+export function monthLabel(month: string): string {
+  return new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 /** Two-letter weekday label ("Su", "Mo", …) for an ISO date. */
 export function weekdayLabel(iso: string): string {
   const labels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];

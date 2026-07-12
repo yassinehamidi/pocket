@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { dismissScreen } from '@/lib/navigation';
-import { Coins, Receipt, X } from 'phosphor-react-native';
+import { CalendarDots, Coins, Receipt, X } from 'phosphor-react-native';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -19,30 +19,35 @@ import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { PocketPop } from '@/components/PocketPop';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useFinanceStore } from '@/store/useFinanceStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { type } from '@/theme/typography';
 
 const BILL_ICONS = ['house', 'lightning', 'wifi-high', 'device-mobile', 'receipt'] as const;
 
 export default function NewBillScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const addBill = useFinanceStore((s) => s.addBill);
 
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
+  const [dueDay, setDueDay] = useState('1');
   const [icon, setIcon] = useState<string>('receipt');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const save = () => {
     const next: Record<string, string> = {};
     const value = parseFloat(amount);
+    const day = parseInt(dueDay, 10);
     if (!name.trim()) next.name = 'Give the bill a name';
     if (isNaN(value) || value <= 0) next.amount = 'Enter an amount above 0';
+    if (isNaN(day) || day < 1 || day > 31) next.dueDay = 'Pick a day between 1 and 31';
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    addBill({ name: name.trim(), amount: value, icon });
+    addBill({ name: name.trim(), amount: value, icon, dueDay: day });
     dismissScreen(router);
   };
 
@@ -84,6 +89,15 @@ export default function NewBillScreen() {
             icon={<Coins size={18} color={colors.textMuted} />}
             error={errors.amount}
           />
+          <FormField
+            label="Due day of the month (1–31)"
+            value={dueDay}
+            onChangeText={setDueDay}
+            placeholder="1"
+            keyboardType="numeric"
+            icon={<CalendarDots size={18} color={colors.textMuted} />}
+            error={errors.dueDay}
+          />
 
           <Text style={styles.iconLabel}>Icon</Text>
           <View style={styles.iconRow}>
@@ -112,7 +126,7 @@ export default function NewBillScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 20 },
   header: {
@@ -147,4 +161,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconChipSelected: { borderColor: colors.green, backgroundColor: colors.greenBgSoft },
-});
+}));

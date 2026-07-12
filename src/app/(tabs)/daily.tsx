@@ -3,19 +3,27 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
+import { DayHistoryCard } from '@/components/DayHistoryCard';
 import { PocketPop } from '@/components/PocketPop';
+import { useTabBarClearance } from '@/components/TabBar';
 import { TransactionRow } from '@/components/TransactionRow';
 import { niceDate, todayISO } from '@/lib/dates';
 import { fmtMoney } from '@/lib/format';
-import { getDailyBudget, getTodaySpent, getTodayTransactions } from '@/lib/selectors';
+import {
+  getDailyBudget,
+  getDayHistory,
+  getTodaySpent,
+  getTodayTransactions,
+} from '@/lib/selectors';
 import { useFinanceStore } from '@/store/useFinanceStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
 
 const RING_SIZE = 196;
 const RING_STROKE = 23;
 
 function ProgressRing({ pct }: { pct: number }) {
+  const colors = useColors();
   const r = (RING_SIZE - RING_STROKE) / 2;
   const circumference = 2 * Math.PI * r;
   return (
@@ -46,7 +54,10 @@ function ProgressRing({ pct }: { pct: number }) {
 }
 
 export default function DailyScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
+  const tabClearance = useTabBarClearance();
   const transactions = useFinanceStore((s) => s.transactions);
   const bills = useFinanceStore((s) => s.bills);
   const debts = useFinanceStore((s) => s.debts);
@@ -55,6 +66,7 @@ export default function DailyScreen() {
   const dailyBudget = getDailyBudget(settings, bills, debts);
   const todaySpent = getTodaySpent(transactions);
   const todayTx = getTodayTransactions(transactions);
+  const history = getDayHistory(transactions, { excludeToday: true });
   const pct = dailyBudget > 0 ? Math.min(100, Math.round((todaySpent / dailyBudget) * 100)) : 0;
   const over = todaySpent > dailyBudget;
 
@@ -62,7 +74,7 @@ export default function DailyScreen() {
     <PocketPop>
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: tabClearance }]}
       showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Daily check</Text>
       <Text style={styles.subtitle}>Today · {niceDate(todayISO())}</Text>
@@ -106,12 +118,27 @@ export default function DailyScreen() {
           <Text style={styles.emptyText}>No spending yet today</Text>
         </View>
       )}
+
+      <Text style={styles.sectionTitle}>History</Text>
+      {history.length > 0 ? (
+        <View style={styles.txList}>
+          {history.map((day) => (
+            <DayHistoryCard key={day.date} day={day} />
+          ))}
+        </View>
+      ) : (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyText}>
+            Past days will show up here as you track your spending.
+          </Text>
+        </View>
+      )}
     </ScrollView>
     </PocketPop>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 20, paddingBottom: 32 },
   title: { ...type.screenTitle, color: colors.textPrimary, marginTop: 6, marginHorizontal: 2 },
@@ -151,4 +178,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: { ...type.cardLabel, color: colors.textMuted, marginTop: 8 },
-});
+}));

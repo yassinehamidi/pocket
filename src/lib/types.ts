@@ -36,8 +36,17 @@ export interface Bill {
   name: string;
   amount: number;
   icon: string;
-  /** Local month (YYYY-MM) this bill was last marked paid, if any. */
+  /** Day of the month (1–31) the bill is due; its paid mark resets on this day. */
+  dueDay: number;
+  /** Billing cycle (YYYY-MM) this bill was last marked paid, if any. */
   lastPaidMonth?: string;
+}
+
+/** One recorded payment towards a debt. */
+export interface DebtPayment {
+  /** ISO date, YYYY-MM-DD */
+  date: string;
+  amount: number;
 }
 
 export interface Debt {
@@ -50,7 +59,11 @@ export interface Debt {
   monthsLeft: number;
   /** Amount owed when the debt was first added — for progress display. */
   originalTotal: number;
+  /** Recorded payments, newest first — drives the monthly history. */
+  payments: DebtPayment[];
 }
+
+export type ThemeMode = 'system' | 'light' | 'dark';
 
 export interface UserSettings {
   userName: string;
@@ -58,6 +71,8 @@ export interface UserSettings {
   salary: number;
   savingsGoal: number;
   privacyMode: boolean;
+  /** Appearance: follow the phone ("system") or force light/dark. */
+  themeMode: ThemeMode;
   /** Region key from data/currencies.ts REGIONS (e.g. "MA"). */
   region: string;
   /** ISO currency code from data/currencies.ts CURRENCIES (e.g. "MAD"). */

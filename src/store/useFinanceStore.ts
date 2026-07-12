@@ -4,9 +4,17 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { DEFAULT_CURRENCY, DEFAULT_REGION, getRegion } from '@/data/currencies';
 import { seedBills, seedDebts, seedSettings, seedTransactions } from '@/data/seed';
-import { monthISO } from '@/lib/dates';
+import { billCycleISO, todayISO } from '@/lib/dates';
 import { setActiveCurrency } from '@/lib/format';
-import { Bill, CategoryKey, Debt, Transaction, TransactionType, UserSettings } from '@/lib/types';
+import {
+  Bill,
+  CategoryKey,
+  Debt,
+  ThemeMode,
+  Transaction,
+  TransactionType,
+  UserSettings,
+} from '@/lib/types';
 
 const FRESH_SETTINGS: UserSettings = {
   userName: '',
@@ -14,6 +22,7 @@ const FRESH_SETTINGS: UserSettings = {
   salary: 0,
   savingsGoal: 0,
   privacyMode: false,
+  themeMode: 'system',
   region: DEFAULT_REGION,
   currency: DEFAULT_CURRENCY,
 };
@@ -31,9 +40,13 @@ interface FinanceState {
     reason: string;
     date: string;
   }) => void;
-  addBill: (bill: { name: string; amount: number; icon: string }) => void;
+  addBill: (bill: { name: string; amount: number; icon: string; dueDay: number }) => void;
   removeBill: (id: string) => void;
-  /** Marks a bill paid for the current month (or unpaid if already marked). */
+  /**
+   * Marks a bill paid for its current cycle (or unpaid if already marked).
+   * Paying records an expense transaction so the balance drops; unpaying
+   * removes that transaction again.
+   */
   toggleBillPaid: (id: string) => void;
   addDebt: (debt: { name: string; total: number; monthly: number; icon: string }) => void;
   removeDebt: (id: string) => void;
@@ -48,6 +61,7 @@ interface FinanceState {
   /** Sets the user's region and switches the app currency to match it. */
   setRegion: (regionKey: string) => void;
   setPrivacyMode: (on: boolean) => void;
+  setThemeMode: (mode: ThemeMode) => void;
   /** Fills the app with the design-reference sample data (Settings → Load sample data). */
   loadSampleData: () => void;
   /** Wipes every transaction, bill, and debt and zeroes the budget. */
@@ -79,13 +93,32 @@ export const useFinanceStore = create<FinanceState>()(
         set((s) => ({ bills: s.bills.filter((b) => b.id !== id) })),
 
       toggleBillPaid: (id) =>
-        set((s) => ({
-          bills: s.bills.map((b) =>
-            b.id === id
-              ? { ...b, lastPaidMonth: b.lastPaidMonth === monthISO() ? undefined : monthISO() }
-              : b,
-          ),
-        })),
+        set((s) => {
+          const bill = s.bills.find((b) => b.id === id);
+          if (!bill) return {};
+          const cycle = billCycleISO(bill.dueDay);
+          const paid = bill.lastPaidMonth === cycle;
+          // Deterministic id so unpaying can find and remove the transaction.
+          const txId = `bill-${id}-${cycle}`;
+          return {
+            bills: s.bills.map((b) =>
+              b.id === id ? { ...b, lastPaidMonth: paid ? undefined : cycle } : b,
+            ),
+            transactions: paid
+              ? s.transactions.filter((t) => t.id !== txId)
+              : [
+                  {
+                    id: txId,
+                    type: 'out' as const,
+                    amount: bill.amount,
+                    category: 'bills' as const,
+                    reason: bill.name,
+                    date: todayISO(),
+                  },
+                  ...s.transactions,
+                ],
+          };
+        }),
 
       addDebt: (debt) =>
         set((s) => ({
@@ -96,6 +129,7 @@ export const useFinanceStore = create<FinanceState>()(
               ...debt,
               originalTotal: debt.total,
               monthsLeft: debt.monthly > 0 ? Math.ceil(debt.total / debt.monthly) : 0,
+              payments: [],
             },
           ],
         })),
@@ -107,11 +141,13 @@ export const useFinanceStore = create<FinanceState>()(
         set((s) => ({
           debts: s.debts.map((d) => {
             if (d.id !== id) return d;
-            const total = Math.max(0, d.total - d.monthly);
+            const paid = Math.min(d.total, d.monthly);
+            const total = d.total - paid;
             return {
               ...d,
               total,
               monthsLeft: d.monthly > 0 ? Math.ceil(total / d.monthly) : 0,
+              payments: [{ date: todayISO(), amount: paid }, ...d.payments],
             };
           }),
         })),
@@ -149,6 +185,9 @@ export const useFinanceStore = create<FinanceState>()(
       setPrivacyMode: (on) =>
         set((s) => ({ settings: { ...s.settings, privacyMode: on } })),
 
+      setThemeMode: (mode) =>
+        set((s) => ({ settings: { ...s.settings, themeMode: mode } })),
+
       loadSampleData: () =>
         set((s) => ({
           transactions: seedTransactions,
@@ -159,6 +198,7 @@ export const useFinanceStore = create<FinanceState>()(
             userName: s.settings.userName || seedSettings.userName,
             region: s.settings.region,
             currency: s.settings.currency,
+            themeMode: s.settings.themeMode,
           },
         })),
 
@@ -172,24 +212,35 @@ export const useFinanceStore = create<FinanceState>()(
             userName: s.settings.userName,
             region: s.settings.region,
             currency: s.settings.currency,
+            themeMode: s.settings.themeMode,
           },
         })),
     }),
     {
       name: 'pocket-finance',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 4,
       migrate: (persisted: unknown) => {
         // v0 → v1: settings gained region/currency.
         // v1 → v2: debts gained originalTotal (assume current total).
-        const state = persisted as { settings?: Partial<UserSettings>; debts?: Debt[] };
+        // v2 → v3: bills gained dueDay (assume the 1st), debts gained payments.
+        // v3 → v4: settings gained themeMode (defaults to "system" via FRESH_SETTINGS).
+        const state = persisted as {
+          settings?: Partial<UserSettings>;
+          bills?: Bill[];
+          debts?: Debt[];
+        };
         if (state?.settings) {
           state.settings = { ...FRESH_SETTINGS, ...state.settings };
+        }
+        if (state?.bills) {
+          state.bills = state.bills.map((b) => ({ ...b, dueDay: b.dueDay ?? 1 }));
         }
         if (state?.debts) {
           state.debts = state.debts.map((d) => ({
             ...d,
             originalTotal: d.originalTotal ?? d.total,
+            payments: d.payments ?? [],
           }));
         }
         return state;

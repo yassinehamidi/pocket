@@ -6,7 +6,7 @@ import { friendlyDate } from '@/lib/dates';
 import { fmtMoney } from '@/lib/format';
 import { Transaction } from '@/lib/types';
 import { useFinanceStore } from '@/store/useFinanceStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { type } from '@/theme/typography';
 
 interface Props {
@@ -18,6 +18,8 @@ interface Props {
 export function TransactionRow({ tx, showDate = true }: Props) {
   // Subscribed so amounts re-format when the user changes region/currency.
   useFinanceStore((s) => s.settings.currency);
+  const colors = useColors();
+  const styles = useStyles();
   const cat = CATEGORIES[tx.category];
   const isOut = tx.type === 'out';
   return (
@@ -42,7 +44,7 @@ export function TransactionRow({ tx, showDate = true }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -66,4 +68,4 @@ const styles = StyleSheet.create({
   title: { ...type.rowTitle, color: colors.textPrimary },
   subtitle: { ...type.rowSubtitle, color: colors.textMuted },
   amount: { ...type.subsectionTitle },
-});
+}));

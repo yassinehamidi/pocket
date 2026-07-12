@@ -16,12 +16,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { PocketPop } from '@/components/PocketPop';
+import { useTabBarClearance } from '@/components/TabBar';
 import { confirmAction } from '@/lib/confirm';
 import { fmtMoney } from '@/lib/format';
-import { monthISO } from '@/lib/dates';
-import { getDailyBudget, getMonthlyAvailable, getTotalBills } from '@/lib/selectors';
+import { monthLabel } from '@/lib/dates';
+import {
+  getBudgetMonthHistory,
+  getDailyBudget,
+  getMonthlyAvailable,
+  getTotalBills,
+  isBillPaid,
+} from '@/lib/selectors';
 import { useFinanceStore } from '@/store/useFinanceStore';
-import { colors } from '@/theme/colors';
+import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
 
 function StepperCard({
@@ -40,6 +47,8 @@ function StepperCard({
   /** Called with the typed value when the amount is edited directly. */
   onSet: (value: number) => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
 
@@ -92,7 +101,10 @@ function StepperCard({
 }
 
 export default function BudgetScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
+  const tabClearance = useTabBarClearance();
   const router = useRouter();
   const bills = useFinanceStore((s) => s.bills);
   const debts = useFinanceStore((s) => s.debts);
@@ -105,17 +117,18 @@ export default function BudgetScreen() {
   const removeDebt = useFinanceStore((s) => s.removeDebt);
   const toggleBillPaid = useFinanceStore((s) => s.toggleBillPaid);
   const recordDebtPayment = useFinanceStore((s) => s.recordDebtPayment);
-  const thisMonth = monthISO();
+  const transactions = useFinanceStore((s) => s.transactions);
 
   const monthlyAvailable = getMonthlyAvailable(settings, bills, debts);
   const dailyBudget = getDailyBudget(settings, bills, debts);
   const totalBills = getTotalBills(bills);
+  const monthHistory = getBudgetMonthHistory(transactions, debts);
 
   return (
     <PocketPop>
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: tabClearance }]}
       showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Budget &amp; Debt</Text>
 
@@ -181,7 +194,7 @@ export default function BudgetScreen() {
         ) : (
           <View style={styles.billsList}>
             {bills.map((b) => {
-              const paid = b.lastPaidMonth === thisMonth;
+              const paid = isBillPaid(b);
               return (
                 <Pressable
                   key={b.id}
@@ -199,7 +212,7 @@ export default function BudgetScreen() {
                       <PhosphorIcon name={b.icon} size={16} color={colors.textMuted} />
                     )}
                     <Text style={[styles.billNameText, paid && styles.billNamePaid]}>
-                      {b.name}
+                      {b.name} <Text style={styles.billDue}>· day {b.dueDay}</Text>
                     </Text>
                   </View>
                   <Text style={[styles.billAmount, paid && styles.billNamePaid]}>
@@ -208,7 +221,9 @@ export default function BudgetScreen() {
                 </Pressable>
               );
             })}
-            <Text style={styles.hint}>Tap a bill to mark it paid · hold to remove</Text>
+            <Text style={styles.hint}>
+              Tap a bill to pay it (comes off your balance) · hold to remove
+            </Text>
           </View>
         )}
       </View>
@@ -281,12 +296,53 @@ export default function BudgetScreen() {
           <Text style={styles.hint}>Tap a debt to record a payment · hold to remove</Text>
         )}
       </View>
+
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Monthly history</Text>
+      </View>
+      {monthHistory.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyText}>
+            Once you track income, spending, or debt payments, each month's savings and
+            debt progress will show up here.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.historyList}>
+          {monthHistory.map((m) => {
+            const savedUp = m.saved >= 0;
+            return (
+              <View key={m.month} style={styles.historyCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.historyMonth}>{monthLabel(m.month)}</Text>
+                  <Text style={styles.historySub}>
+                    {m.debtPaid > 0
+                      ? `Debt paid ${fmtMoney(m.debtPaid)}`
+                      : 'No debt payments'}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text
+                    style={[
+                      styles.historySaved,
+                      { color: savedUp ? colors.green : colors.red },
+                    ]}>
+                    {savedUp ? '+' : '-'}
+                    {fmtMoney(Math.abs(m.saved))}
+                  </Text>
+                  <Text style={styles.historySavedLabel}>saved</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
     </ScrollView>
     </PocketPop>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themedStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 20, paddingBottom: 32 },
   title: {
@@ -436,7 +492,25 @@ const styles = StyleSheet.create({
   billName: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   billNameText: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.textSecondary },
   billNamePaid: { color: colors.textMuted, textDecorationLine: 'line-through' },
+  billDue: { fontFamily: fonts.semiBold, fontSize: 11, color: colors.textMuted },
   billAmount: { ...type.cardLabel, color: colors.textPrimary },
+
+  historyList: { gap: 9 },
+  historyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+  },
+  historyMonth: { ...type.rowTitle, color: colors.textPrimary },
+  historySub: { ...type.rowSubtitle, color: colors.textMuted },
+  historySaved: { ...type.statValue },
+  historySavedLabel: { fontFamily: fonts.semiBold, fontSize: 11, color: colors.textMuted },
 
   sectionTitle: { ...type.subsectionTitle, color: colors.textPrimary },
   debtList: { gap: 11 },
@@ -479,4 +553,4 @@ const styles = StyleSheet.create({
     borderTopColor: colors.divider,
   },
   debtMonthsLeft: { ...type.smallLabel, color: colors.textBody },
-});
+}));

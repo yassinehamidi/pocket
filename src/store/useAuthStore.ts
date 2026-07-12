@@ -27,6 +27,8 @@ interface AuthState {
   completeOnboarding: () => void;
   signUp: (input: { name: string; email: string; password: string }) => Promise<void>;
   logIn: (input: { email: string; password: string }) => Promise<boolean>;
+  /** Enters the app without an account, skipping sign-up/log-in. */
+  continueAsGuest: () => void;
   logOut: () => void;
   updateName: (name: string) => void;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
@@ -70,6 +72,8 @@ export const useAuthStore = create<AuthState>()(
         set({ session: true });
         return true;
       },
+
+      continueAsGuest: () => set({ session: true }),
 
       logOut: () => set({ session: false }),
 
