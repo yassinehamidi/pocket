@@ -10,6 +10,7 @@ import {
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PocketPop } from '@/components/PocketPop';
 import { confirmAction } from '@/lib/confirm';
 import { useFinanceStore } from '@/store/useFinanceStore';
 import { colors } from '@/theme/colors';
@@ -27,6 +28,7 @@ export default function SettingsScreen() {
   );
 
   return (
+    <PocketPop>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
@@ -115,6 +117,7 @@ export default function SettingsScreen() {
         </View>
       </View>
     </ScrollView>
+    </PocketPop>
   );
 }
 

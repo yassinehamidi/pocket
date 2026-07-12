@@ -21,6 +21,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PhosphorIcon } from '@/components/PhosphorIcon';
+import { PocketPop } from '@/components/PocketPop';
 import { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/data/categories';
 import { niceDate, todayISO } from '@/lib/dates';
 import { CategoryKey, TransactionType } from '@/lib/types';
@@ -76,6 +77,7 @@ export default function AddScreen() {
   };
 
   return (
+    <PocketPop>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[
@@ -181,6 +183,7 @@ export default function AddScreen() {
         </LinearGradient>
       </Pressable>
     </ScrollView>
+    </PocketPop>
   );
 }
 

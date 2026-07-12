@@ -9,6 +9,7 @@ import {
 } from 'phosphor-react-native';
 import { useRef, useState } from 'react';
 import {
+  Animated,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -70,24 +71,36 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
   const scrollRef = useRef<ScrollView>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
   const [index, setIndex] = useState(0);
 
-  // Track the current page from the scroll offset (FlatList's viewability
-  // callbacks don't fire on react-native-web, so we do the math ourselves).
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const page = Math.round(e.nativeEvent.contentOffset.x / width);
-    if (page !== index && page >= 0 && page < SLIDES.length) setIndex(page);
-  };
+  // Dots and slide parallax are driven directly by the scroll offset, so
+  // they animate in lockstep with the swipe/scroll on every platform.
+  const onScroll = Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+    useNativeDriver: false,
+    listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const page = Math.round(e.nativeEvent.contentOffset.x / width);
+      if (page >= 0 && page < SLIDES.length) {
+        setIndex((current) => (page !== current ? page : current));
+      }
+    },
+  });
 
   const isLast = index === SLIDES.length - 1;
+
+  // With animated: true, react-native-web maps this to the browser's own
+  // smooth scrolling (node.scroll({ behavior: 'smooth' })), and native
+  // animates as usual — no platform branch needed.
+  const scrollToPage = (page: number) => {
+    scrollRef.current?.scrollTo({ x: page * width, animated: true });
+  };
 
   const next = () => {
     if (isLast) {
       completeOnboarding();
     } else {
-      const target = index + 1;
-      scrollRef.current?.scrollTo({ x: target * width, animated: true });
-      setIndex(target);
+      scrollToPage(index + 1);
+      setIndex(index + 1);
     }
   };
 
@@ -103,6 +116,8 @@ export default function OnboardingScreen() {
         </Pressable>
       </View>
 
+      {/* Plain ScrollView: on web its ref is the host node (with scrollTo and
+          getScrollableNode attached); Animated.ScrollView's ref exposes neither. */}
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -111,27 +126,59 @@ export default function OnboardingScreen() {
         onScroll={onScroll}
         scrollEventThrottle={16}
         style={{ flex: 1 }}>
-        {SLIDES.map((item) => {
+        {SLIDES.map((item, i) => {
           const SlideIcon = item.icon;
+          const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
+          const opacity = scrollX.interpolate({
+            inputRange,
+            outputRange: [0.2, 1, 0.2],
+            extrapolate: 'clamp',
+          });
+          const scale = scrollX.interpolate({
+            inputRange,
+            outputRange: [0.88, 1, 0.88],
+            extrapolate: 'clamp',
+          });
+          const translateY = scrollX.interpolate({
+            inputRange,
+            outputRange: [14, 0, 14],
+            extrapolate: 'clamp',
+          });
           return (
             <View key={item.key} style={[styles.slide, { width }]}>
-              <View style={styles.iconTile}>
-                <SlideIcon size={64} color={colors.greenDark} weight="fill" />
-              </View>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.body}>{item.body}</Text>
+              <Animated.View
+                style={[styles.slideInner, { opacity, transform: [{ scale }, { translateY }] }]}>
+                <View style={styles.iconTile}>
+                  <SlideIcon size={64} color={colors.greenDark} weight="fill" />
+                </View>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.body}>{item.body}</Text>
+              </Animated.View>
             </View>
           );
         })}
       </ScrollView>
 
       <View style={styles.dots}>
-        {SLIDES.map((s, i) => (
-          <View
-            key={s.key}
-            style={[styles.dot, i === index && styles.dotActive]}
-          />
-        ))}
+        {SLIDES.map((s, i) => {
+          const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
+          const dotWidth = scrollX.interpolate({
+            inputRange,
+            outputRange: [8, 22, 8],
+            extrapolate: 'clamp',
+          });
+          const dotColor = scrollX.interpolate({
+            inputRange,
+            outputRange: [colors.trackRing, colors.green, colors.trackRing],
+            extrapolate: 'clamp',
+          });
+          return (
+            <Animated.View
+              key={s.key}
+              style={[styles.dot, { width: dotWidth, backgroundColor: dotColor }]}
+            />
+          );
+        })}
       </View>
 
       <View style={styles.footer}>
@@ -158,6 +205,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 36,
   },
+  slideInner: { alignItems: 'center' },
   iconTile: {
     width: 132,
     height: 132,
@@ -190,12 +238,9 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   dot: {
-    width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.trackRing,
   },
-  dotActive: { width: 22, backgroundColor: colors.green },
 
   footer: { paddingHorizontal: 24 },
 });

@@ -21,6 +21,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/FormField';
+import { PocketPop } from '@/components/PocketPop';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { confirmAction } from '@/lib/confirm';
 import { fmtDH } from '@/lib/format';
@@ -95,6 +96,7 @@ export default function AccountScreen() {
   };
 
   return (
+    <PocketPop>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -209,6 +211,7 @@ export default function AccountScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </PocketPop>
   );
 }
 

@@ -11,6 +11,7 @@ import {
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PocketPop } from '@/components/PocketPop';
 import { TransactionRow } from '@/components/TransactionRow';
 import { fmtDH, fmtDHSigned } from '@/lib/format';
 import {
@@ -49,6 +50,7 @@ export default function HomeScreen() {
   const recent = getRecentTransactions(transactions);
 
   return (
+    <PocketPop>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
@@ -138,6 +140,7 @@ export default function HomeScreen() {
         </View>
       )}
     </ScrollView>
+    </PocketPop>
   );
 }
 

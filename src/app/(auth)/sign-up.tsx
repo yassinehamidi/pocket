@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/FormField';
+import { PocketPop } from '@/components/PocketPop';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { isValidEmail } from '@/lib/auth';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -55,6 +56,7 @@ export default function SignUpScreen() {
   };
 
   return (
+    <PocketPop>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -139,6 +141,7 @@ export default function SignUpScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </PocketPop>
   );
 }
 

@@ -10,6 +10,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
+import { PocketPop } from '@/components/PocketPop';
 import { TransactionRow } from '@/components/TransactionRow';
 import { niceDate, todayISO } from '@/lib/dates';
 import { fmtDH } from '@/lib/format';
@@ -74,6 +75,7 @@ export default function DailyScreen() {
   const over = todaySpent > dailyBudget;
 
   return (
+    <PocketPop>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
@@ -141,6 +143,7 @@ export default function DailyScreen() {
         </View>
       )}
     </ScrollView>
+    </PocketPop>
   );
 }
 

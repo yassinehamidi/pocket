@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/FormField';
 import { PhosphorIcon } from '@/components/PhosphorIcon';
+import { PocketPop } from '@/components/PocketPop';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useFinanceStore } from '@/store/useFinanceStore';
 import { colors } from '@/theme/colors';
@@ -45,6 +46,7 @@ export default function NewBillScreen() {
   };
 
   return (
+    <PocketPop>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -105,6 +107,7 @@ export default function NewBillScreen() {
         <PrimaryButton label="Add bill" onPress={save} />
       </ScrollView>
     </KeyboardAvoidingView>
+    </PocketPop>
   );
 }
 

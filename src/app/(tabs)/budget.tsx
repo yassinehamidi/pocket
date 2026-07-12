@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PhosphorIcon } from '@/components/PhosphorIcon';
+import { PocketPop } from '@/components/PocketPop';
 import { confirmAction } from '@/lib/confirm';
 import { fmtDH } from '@/lib/format';
 import { getDailyBudget, getMonthlyAvailable, getTotalBills } from '@/lib/selectors';
@@ -61,6 +62,7 @@ export default function BudgetScreen() {
   const totalBills = getTotalBills(bills);
 
   return (
+    <PocketPop>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
@@ -193,6 +195,7 @@ export default function BudgetScreen() {
         {debts.length > 0 && <Text style={styles.hint}>Hold a debt to remove it</Text>}
       </View>
     </ScrollView>
+    </PocketPop>
   );
 }
 

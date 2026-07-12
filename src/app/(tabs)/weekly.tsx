@@ -9,6 +9,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PhosphorIcon } from '@/components/PhosphorIcon';
+import { PocketPop } from '@/components/PocketPop';
 import { last7Days, niceDate, todayISO } from '@/lib/dates';
 import { fmtDH } from '@/lib/format';
 import {
@@ -34,6 +35,7 @@ export default function WeeklyScreen() {
   const weekStart = last7Days()[0];
 
   return (
+    <PocketPop>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
@@ -136,6 +138,7 @@ export default function WeeklyScreen() {
         ))}
       </View>
     </ScrollView>
+    </PocketPop>
   );
 }
 
