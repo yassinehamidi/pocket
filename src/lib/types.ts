@@ -61,6 +61,26 @@ export interface Debt {
   payments: DebtPayment[];
 }
 
+/**
+ * One move of money between the spendable balance and the savings pot.
+ * Positive amount = put into savings, negative = taken back out.
+ */
+export interface SavingsEntry {
+  id: string;
+  amount: number;
+  /** ISO date, YYYY-MM-DD */
+  date: string;
+}
+
+/** Something the user wants to buy — the Budget tab computes affordability. */
+export interface Wish {
+  id: string;
+  name: string;
+  price: number;
+  /** ISO date, YYYY-MM-DD */
+  createdAt: string;
+}
+
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 export interface UserSettings {
@@ -69,6 +89,8 @@ export interface UserSettings {
   salary: number;
   savingsGoal: number;
   privacyMode: boolean;
+  /** Day of the month (1–31) the salary arrives — drives wish affordability. */
+  salaryDay: number;
   /** Appearance: follow the phone ("system") or force light/dark. */
   themeMode: ThemeMode;
   /** Region key from data/currencies.ts REGIONS (e.g. "MA"). */

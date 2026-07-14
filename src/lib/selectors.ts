@@ -1,16 +1,46 @@
 import { getCategory } from '@/data/categories';
-import { billCycleISO, last7Days, previous7Days, todayISO, weekdayLabel } from '@/lib/dates';
-import { Bill, Category, CategoryKey, Debt, Transaction, UserSettings } from '@/lib/types';
+import {
+  billCycleISO,
+  daysUntil,
+  last7Days,
+  monthISO,
+  nextSalaryISO,
+  previous7Days,
+  todayISO,
+  weekdayLabel,
+} from '@/lib/dates';
+import {
+  Bill,
+  Category,
+  CategoryKey,
+  Debt,
+  SavingsEntry,
+  Transaction,
+  UserSettings,
+} from '@/lib/types';
 
 /**
  * Derived values — computed from raw store data, never stored.
  * Formulas match the design reference logic exactly.
  */
 
-export function getBalance(transactions: Transaction[], settings: UserSettings): number {
+/** Money sitting in the savings pot (deposits minus withdrawals). */
+export function getSavedTotal(savings: SavingsEntry[]): number {
+  return savings.reduce((a, s) => a + s.amount, 0);
+}
+
+/**
+ * Spendable balance: start + income − spending − whatever was moved into
+ * the savings pot. Saved money is shown separately and never spent from.
+ */
+export function getBalance(
+  transactions: Transaction[],
+  settings: UserSettings,
+  savings: SavingsEntry[],
+): number {
   const inSum = transactions.filter((t) => t.type === 'in').reduce((a, t) => a + t.amount, 0);
   const outSum = transactions.filter((t) => t.type === 'out').reduce((a, t) => a + t.amount, 0);
-  return settings.startBalance + inSum - outSum;
+  return settings.startBalance + inSum - outSum - getSavedTotal(savings);
 }
 
 export function getWeekTotals(transactions: Transaction[]): { weekIn: number; weekOut: number } {
@@ -58,10 +88,22 @@ export function getDailyBudget(settings: UserSettings, bills: Bill[], debts: Deb
   return Math.max(0, getMonthlyAvailable(settings, bills, debts)) / 31;
 }
 
+/**
+ * Auto-created bill payments (id "bill-<billId>-<cycle>", written by
+ * toggleBillPaid) are already reserved by the monthly plan (salary − bills −
+ * debt − savings), so they must NOT count against the daily discretionary
+ * budget — otherwise marking rent paid would instantly blow the Daily ring.
+ * They still count in balance, weekly cash flow, and history, which track
+ * real money movements.
+ */
+function isBillPaymentTx(t: Transaction): boolean {
+  return t.id.startsWith('bill-');
+}
+
 export function getTodaySpent(transactions: Transaction[]): number {
   const today = todayISO();
   return transactions
-    .filter((t) => t.type === 'out' && t.date === today)
+    .filter((t) => t.type === 'out' && t.date === today && !isBillPaymentTx(t))
     .reduce((a, t) => a + t.amount, 0);
 }
 
@@ -169,7 +211,7 @@ export function getTodayCategorySegments(
   const today = todayISO();
   const totals = new Map<CategoryKey, number>();
   for (const t of transactions) {
-    if (t.type !== 'out' || t.date !== today) continue;
+    if (t.type !== 'out' || t.date !== today || isBillPaymentTx(t)) continue;
     totals.set(t.category, (totals.get(t.category) ?? 0) + t.amount);
   }
   const total = [...totals.values()].reduce((a, v) => a + v, 0);
@@ -192,9 +234,10 @@ export function getRecentTransactions(transactions: Transaction[], limit = 10): 
     .slice(0, limit);
 }
 
+/** Today's discretionary transactions (bill payments live in history instead). */
 export function getTodayTransactions(transactions: Transaction[]): Transaction[] {
   const today = todayISO();
-  return transactions.filter((t) => t.date === today);
+  return transactions.filter((t) => t.date === today && !isBillPaymentTx(t));
 }
 
 export interface DayHistory {
@@ -283,5 +326,65 @@ export function getMonthHistory(transactions: Transaction[], month: string): Mon
     monthIn: inMonth.filter((t) => t.type === 'in').reduce((a, t) => a + t.amount, 0),
     monthOut: inMonth.filter((t) => t.type === 'out').reduce((a, t) => a + t.amount, 0),
     days: getDayHistory(inMonth),
+  };
+}
+
+/** Total amount of bills not yet paid for their current cycle. */
+export function getUnpaidBillsTotal(bills: Bill[]): number {
+  return bills.filter((b) => !isBillPaid(b)).reduce((a, b) => a + b.amount, 0);
+}
+
+/** Debt money still due this month: monthly commitments minus payments already recorded. */
+export function getDebtLeftThisMonth(debts: Debt[]): number {
+  const month = monthISO();
+  return debts.reduce((a, d) => {
+    if (d.total <= 0) return a;
+    const paidThisMonth = d.payments
+      .filter((p) => p.date.startsWith(month))
+      .reduce((x, p) => x + p.amount, 0);
+    return a + Math.max(0, Math.min(d.monthly, d.total) - paidThisMonth);
+  }, 0);
+}
+
+export interface WishAffordability {
+  /** Money free for wishes right now, after every reservation (can be negative). */
+  freeForWishes: number;
+  daysToSalary: number;
+  /** ISO date of the next salary. */
+  nextSalaryDate: string;
+  /** What is being held back from the balance until the next salary. */
+  reserved: { bills: number; debt: number; savings: number; daily: number };
+}
+
+/**
+ * Can a wish be bought today without wrecking the rest of the month?
+ * Start from the real balance and reserve everything still owed before the
+ * next salary: unpaid bills, debt payments not yet made this month, the
+ * monthly savings goal, and the normal daily budget for each remaining day.
+ * Whatever is left is free to spend on wishes.
+ */
+export function getWishAffordability(
+  transactions: Transaction[],
+  settings: UserSettings,
+  bills: Bill[],
+  debts: Debt[],
+  savings: SavingsEntry[],
+): WishAffordability {
+  const nextSalaryDate = nextSalaryISO(settings.salaryDay);
+  const daysToSalary = Math.max(0, daysUntil(nextSalaryDate));
+  const reserved = {
+    bills: getUnpaidBillsTotal(bills),
+    debt: getDebtLeftThisMonth(debts),
+    savings: settings.savingsGoal,
+    daily: getDailyBudget(settings, bills, debts) * daysToSalary,
+  };
+  // Spendable balance only — the savings pot is never wish money.
+  const balance = getBalance(transactions, settings, savings);
+  return {
+    freeForWishes:
+      balance - reserved.bills - reserved.debt - reserved.savings - reserved.daily,
+    daysToSalary,
+    nextSalaryDate,
+    reserved,
   };
 }

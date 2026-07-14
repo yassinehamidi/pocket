@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { DEFAULT_CATEGORIES } from '@/data/categories';
 import { DEFAULT_CURRENCY, DEFAULT_REGION, getRegion } from '@/data/currencies';
-import { seedBills, seedDebts, seedSettings, seedTransactions } from '@/data/seed';
+import { seedBills, seedDebts, seedSavings, seedSettings, seedTransactions, seedWishes } from '@/data/seed';
 import { billCycleISO, todayISO } from '@/lib/dates';
 import { setActiveCurrency } from '@/lib/format';
 import {
@@ -15,7 +15,9 @@ import {
   ThemeMode,
   Transaction,
   TransactionType,
+  SavingsEntry,
   UserSettings,
+  Wish,
 } from '@/lib/types';
 
 const FRESH_SETTINGS: UserSettings = {
@@ -24,6 +26,7 @@ const FRESH_SETTINGS: UserSettings = {
   salary: 0,
   savingsGoal: 0,
   privacyMode: false,
+  salaryDay: 1,
   themeMode: 'system',
   region: DEFAULT_REGION,
   currency: DEFAULT_CURRENCY,
@@ -35,6 +38,10 @@ interface FinanceState {
   debts: Debt[];
   /** All categories — built-in defaults plus user-created ones. */
   categories: Category[];
+  /** Things the user wants to buy (Budget → Wishlist). */
+  wishes: Wish[];
+  /** Moves between the spendable balance and the savings pot. */
+  savings: SavingsEntry[];
   settings: UserSettings;
 
   /** Creates a category and returns its generated key. */
@@ -68,6 +75,16 @@ interface FinanceState {
   removeDebt: (id: string) => void;
   /** Reduces a debt's remaining balance by one monthly payment. */
   recordDebtPayment: (id: string) => void;
+  addWish: (wish: { name: string; price: number }) => void;
+  removeWish: (id: string) => void;
+  /** Buys a wish: records the expense (drops the balance) and removes it. */
+  buyWish: (id: string) => void;
+  /** Sets the day of month (1–31) the salary arrives. */
+  setSalaryDay: (day: number) => void;
+  /** Moves money from the spendable balance into the savings pot. */
+  depositSavings: (amount: number) => void;
+  /** Takes money back out of the savings pot into the balance. */
+  withdrawSavings: (amount: number) => void;
   adjustSalary: (delta: number) => void;
   adjustSavingsGoal: (delta: number) => void;
   setSalary: (salary: number) => void;
@@ -96,6 +113,8 @@ export const useFinanceStore = create<FinanceState>()(
       bills: [],
       debts: [],
       categories: DEFAULT_CATEGORIES,
+      wishes: [],
+      savings: [],
       settings: FRESH_SETTINGS,
 
       addCategory: (input) => {
@@ -180,6 +199,55 @@ export const useFinanceStore = create<FinanceState>()(
           }),
         })),
 
+      addWish: (wish) =>
+        set((s) => ({
+          wishes: [...s.wishes, { id: `w${Date.now()}`, createdAt: todayISO(), ...wish }],
+        })),
+
+      removeWish: (id) =>
+        set((s) => ({ wishes: s.wishes.filter((w) => w.id !== id) })),
+
+      buyWish: (id) =>
+        set((s) => {
+          const wish = s.wishes.find((w) => w.id === id);
+          if (!wish) return {};
+          return {
+            wishes: s.wishes.filter((w) => w.id !== id),
+            transactions: [
+              {
+                id: `wish-${id}`,
+                type: 'out' as const,
+                amount: wish.price,
+                category: 'shopping',
+                reason: wish.name,
+                date: todayISO(),
+              },
+              ...s.transactions,
+            ],
+          };
+        }),
+
+      depositSavings: (amount) =>
+        set((s) => ({
+          savings: [{ id: `s${Date.now()}`, amount: Math.abs(amount), date: todayISO() }, ...s.savings],
+        })),
+
+      withdrawSavings: (amount) =>
+        set((s) => ({
+          savings: [
+            { id: `s${Date.now()}`, amount: -Math.abs(amount), date: todayISO() },
+            ...s.savings,
+          ],
+        })),
+
+      setSalaryDay: (day) =>
+        set((s) => ({
+          settings: {
+            ...s.settings,
+            salaryDay: Math.min(31, Math.max(1, Math.round(day) || 1)),
+          },
+        })),
+
       adjustSalary: (delta) =>
         set((s) => ({
           settings: { ...s.settings, salary: Math.max(0, s.settings.salary + delta) },
@@ -221,6 +289,8 @@ export const useFinanceStore = create<FinanceState>()(
           transactions: seedTransactions,
           bills: seedBills,
           debts: seedDebts,
+          wishes: seedWishes,
+          savings: seedSavings,
           // Sample data uses built-in category keys — restore any the user is
           // missing, but keep their customs and color edits.
           categories: [
@@ -241,6 +311,8 @@ export const useFinanceStore = create<FinanceState>()(
           transactions: [],
           bills: [],
           debts: [],
+          wishes: [],
+          savings: [],
           categories: DEFAULT_CATEGORIES,
           settings: {
             ...FRESH_SETTINGS,
@@ -254,22 +326,28 @@ export const useFinanceStore = create<FinanceState>()(
     {
       name: 'pocket-finance',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 5,
+      version: 7,
       migrate: (persisted: unknown) => {
         // v0 → v1: settings gained region/currency.
         // v1 → v2: debts gained originalTotal (assume current total).
         // v2 → v3: bills gained dueDay (assume the 1st), debts gained payments.
         // v3 → v4: settings gained themeMode (defaults to "system" via FRESH_SETTINGS).
         // v4 → v5: categories moved into the store (colored, user-editable).
+        // v5 → v6: wishes added; settings gained salaryDay (default 1 via FRESH_SETTINGS).
+        // v6 → v7: savings pot entries added.
         const state = persisted as {
           settings?: Partial<UserSettings>;
           bills?: Bill[];
           debts?: Debt[];
           categories?: Category[];
+          wishes?: Wish[];
+          savings?: SavingsEntry[];
         };
         if (!state.categories || state.categories.length === 0) {
           state.categories = DEFAULT_CATEGORIES;
         }
+        state.wishes = state.wishes ?? [];
+        state.savings = state.savings ?? [];
         if (state?.settings) {
           state.settings = { ...FRESH_SETTINGS, ...state.settings };
         }
@@ -290,6 +368,8 @@ export const useFinanceStore = create<FinanceState>()(
         bills: s.bills,
         debts: s.debts,
         categories: s.categories,
+        wishes: s.wishes,
+        savings: s.savings,
         settings: s.settings,
       }),
       onRehydrateStorage: () => (state) => {

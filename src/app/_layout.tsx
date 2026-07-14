@@ -90,6 +90,7 @@ export default function RootLayout() {
           <Stack.Screen name="add" options={{ presentation: 'modal' }} />
           <Stack.Screen name="new-bill" options={{ presentation: 'modal' }} />
           <Stack.Screen name="new-debt" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="new-wish" options={{ presentation: 'modal' }} />
           <Stack.Screen name="settings" />
           <Stack.Screen name="account" />
         </Stack.Protected>

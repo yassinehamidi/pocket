@@ -53,6 +53,34 @@ export function billCycleISO(dueDay: number): string {
   return toISO(cycle).slice(0, 7);
 }
 
+/**
+ * ISO date of the next salary for a pay day-of-month. If today is on or past
+ * the pay day, the next one is next month's. Pay days beyond a month's length
+ * clamp to its last day (e.g. day 31 in February).
+ */
+export function nextSalaryISO(salaryDay: number): string {
+  const now = new Date();
+  const dayIn = (y: number, m: number) =>
+    Math.min(Math.max(1, salaryDay), new Date(y, m + 1, 0).getDate());
+  let y = now.getFullYear();
+  let m = now.getMonth();
+  if (now.getDate() >= dayIn(y, m)) {
+    m += 1;
+    if (m > 11) {
+      m = 0;
+      y += 1;
+    }
+  }
+  return toISO(new Date(y, m, dayIn(y, m)));
+}
+
+/** Whole days from today until an ISO date (0 = today, negative = past). */
+export function daysUntil(iso: string): number {
+  const target = new Date(`${iso}T00:00:00`);
+  const today = new Date(`${todayISO()}T00:00:00`);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
 /** "July 2026" from a YYYY-MM string. */
 export function monthLabel(month: string): string {
   return new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', {

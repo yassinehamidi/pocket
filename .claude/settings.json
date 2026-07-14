@@ -4,7 +4,10 @@
       "WebFetch(domain:github.com)",
       "WebSearch",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(node -e \"const p=require\\('./node_modules/expo/package.json'\\); console.log\\(JSON.stringify\\(p.exports ? Object.keys\\(p.exports\\) : 'no exports field'\\)\\)\")"
+      "Bash(node -e \"const p=require\\('./node_modules/expo/package.json'\\); console.log\\(JSON.stringify\\(p.exports ? Object.keys\\(p.exports\\) : 'no exports field'\\)\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(npx expo *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8081/)"
     ]
   },
   "enabledPlugins": {

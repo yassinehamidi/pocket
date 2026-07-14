@@ -1,5 +1,13 @@
 import { billCycleISO, daysAgoISO } from '@/lib/dates';
-import { Bill, CategoryKey, Debt, Transaction, UserSettings } from '@/lib/types';
+import {
+  Bill,
+  CategoryKey,
+  Debt,
+  SavingsEntry,
+  Transaction,
+  UserSettings,
+  Wish,
+} from '@/lib/types';
 
 /**
  * Sample data matching the design reference numbers, with dates shifted
@@ -96,12 +104,25 @@ export const seedDebts: Debt[] = [
   },
 ];
 
+/** Monthly moves into the savings pot, matching the sample savings goal. */
+export const seedSavings: SavingsEntry[] = [
+  { id: 's1', amount: 1000, date: daysAgoISO(60) },
+  { id: 's2', amount: 1000, date: daysAgoISO(29) },
+  { id: 's3', amount: 500, date: daysAgoISO(3) },
+];
+
+export const seedWishes: Wish[] = [
+  { id: 'w1', name: 'Wireless headphones', price: 2800, createdAt: daysAgoISO(4) },
+  { id: 'w2', name: 'Vespa scooter', price: 32000, createdAt: daysAgoISO(15) },
+];
+
 export const seedSettings: UserSettings = {
   userName: 'Yassine',
   startBalance: 3200,
   salary: 8000,
   savingsGoal: 1000,
   privacyMode: false,
+  salaryDay: 1,
   themeMode: 'system',
   region: 'MA',
   currency: 'MAD',

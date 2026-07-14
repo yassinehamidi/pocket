@@ -6,13 +6,17 @@ import {
   Coins,
   CreditCard,
   GearSix,
+  PiggyBank,
+  Plus,
   Receipt,
   Wallet,
 } from 'phosphor-react-native';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PocketPop } from '@/components/PocketPop';
+import { SavingsSheet } from '@/components/SavingsSheet';
 import { useTabBarClearance } from '@/components/TabBar';
 import { TransactionRow } from '@/components/TransactionRow';
 import { currencySymbol, fmtMoney, fmtMoneySigned } from '@/lib/format';
@@ -23,6 +27,7 @@ import {
   getDebtPercentLeft,
   getRecentTransactions,
   getSafeToSpendToday,
+  getSavedTotal,
   getWeekTotals,
 } from '@/lib/selectors';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -46,17 +51,21 @@ export default function HomeScreen() {
   const transactions = useFinanceStore((s) => s.transactions);
   const bills = useFinanceStore((s) => s.bills);
   const debts = useFinanceStore((s) => s.debts);
+  const savings = useFinanceStore((s) => s.savings);
   const settings = useFinanceStore((s) => s.settings);
   const accountName = useAuthStore((s) => s.account?.name);
   const displayName = accountName || settings.userName || 'there';
+  const [savingsOpen, setSavingsOpen] = useState(false);
 
-  const balance = getBalance(transactions, settings);
+  const balance = getBalance(transactions, settings, savings);
+  const saved = getSavedTotal(savings);
   const { weekIn, weekOut } = getWeekTotals(transactions);
   const dailyBudget = getDailyBudget(settings, bills, debts);
   const safe = getSafeToSpendToday(transactions, settings, bills, debts);
   const recent = getRecentTransactions(transactions);
   const billsLeft = getBillsLeft(bills);
   const debtPctLeft = getDebtPercentLeft(debts);
+  const hide = settings.privacyMode;
 
   return (
     <PocketPop>
@@ -90,11 +99,23 @@ export default function HomeScreen() {
         <View style={[styles.deco, { bottom: -60, right: 20, width: 120, height: 120, opacity: 0.7 }]} />
         <View style={styles.balanceLabelRow}>
           <Wallet size={15} color={colors.white} />
-          <Text style={styles.balanceLabel}>Total balance</Text>
+          <Text style={styles.balanceLabel}>Balance</Text>
         </View>
         <Text style={styles.balanceValue}>
-          {settings.privacyMode ? `•••• ${currencySymbol()}` : fmtMoney(balance)}
+          {hide ? `•••• ${currencySymbol()}` : fmtMoney(balance)}
         </Text>
+
+        <Pressable style={styles.savedRow} onPress={() => setSavingsOpen(true)}>
+          <PiggyBank size={17} color={colors.white} weight="fill" />
+          <Text style={styles.savedLabel}>Saved</Text>
+          <Text style={styles.savedValue}>
+            {hide ? `•••• ${currencySymbol()}` : fmtMoney(saved)}
+          </Text>
+          <View style={styles.savedManage}>
+            <Plus size={13} color={colors.white} weight="bold" />
+          </View>
+        </Pressable>
+
         <View style={styles.statRow}>
           <View style={styles.statBox}>
             <View style={styles.statLabelRow}>
@@ -170,6 +191,13 @@ export default function HomeScreen() {
           </Text>
         </View>
       )}
+
+      <SavingsSheet
+        visible={savingsOpen}
+        onClose={() => setSavingsOpen(false)}
+        available={balance}
+        saved={saved}
+      />
     </ScrollView>
     </PocketPop>
   );
@@ -229,6 +257,28 @@ const useStyles = themedStyles((colors) => StyleSheet.create({
   balanceLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   balanceLabel: { ...type.cardLabel, color: colors.white, opacity: 0.9 },
   balanceValue: { ...type.balance, color: colors.white, marginTop: 6 },
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 12,
+  },
+  savedLabel: { ...type.tinyLabel, color: colors.white, opacity: 0.9 },
+  savedValue: { fontFamily: fonts.extraBold, fontSize: 14.5, color: colors.white },
+  savedManage: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
+  },
   statRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   statBox: {
     flex: 1,
