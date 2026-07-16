@@ -3,8 +3,8 @@
 Expo SDK 54 (React Native) + TypeScript + Expo Router. Docs for this exact SDK: https://docs.expo.dev/versions/v54.0.0/
 
 ## Layout
-- `src/app/` — Expo Router routes guarded in `_layout.tsx` by `Stack.Protected`: `onboarding` (first launch) → `(auth)/` (`sign-up`, `log-in`) → app: `(tabs)/` (Home `index`, `daily`, `weekly`, `budget`), modals `add`, `new-bill`, `new-debt`, pushed `settings` (gear icon) and `account` (avatar)
-- `src/components/` — `TabBar` (custom bar with center FAB), `TransactionRow`, `PhosphorIcon` (kebab-case name → phosphor-react-native component), `PrimaryButton` (gradient CTA), `FormField`
+- `src/app/` — Expo Router routes guarded in `_layout.tsx` by `Stack.Protected`: `onboarding` (first launch) → `(auth)/` (`sign-up`, `log-in`) → app: `(tabs)/` (Home `index`, `history` — Daily/Weekly views behind a segmented toggle, `goals` — wish fund + wishlist + no-spend booster, `budget`), modals `add`, `new-bill`, `new-debt`, `new-wish`, pushed `settings` (gear icon) and `account` (avatar)
+- `src/components/` — `TabBar` (custom bar with center FAB), `DailySection`/`WeeklySection` (the two History tab views), `TransactionRow`, `PhosphorIcon` (kebab-case name → phosphor-react-native component), `PrimaryButton` (gradient CTA), `FormField`
 - `src/store/useFinanceStore.ts` — finance data (transactions, bills, debts, settings), persisted to AsyncStorage; starts EMPTY (seed data only loads via Settings → Load sample data)
 - `src/store/useAuthStore.ts` — device-local account (salted SHA-256 hash via expo-crypto, no backend), session flag, hasOnboarded flag; also persisted. Route guards react to it; screens never navigate on login/logout themselves
 - `src/lib/selectors.ts` — ALL derived values (balance, daily budget, weekly stats); never store computed numbers

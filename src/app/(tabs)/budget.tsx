@@ -8,8 +8,6 @@ import {
   PencilSimple,
   PiggyBank,
   Plus,
-  ShoppingCart,
-  Sparkle,
   SunHorizon,
 } from 'phosphor-react-native';
 import { ReactNode, useState } from 'react';
@@ -21,13 +19,12 @@ import { PocketPop } from '@/components/PocketPop';
 import { useTabBarClearance } from '@/components/TabBar';
 import { confirmAction } from '@/lib/confirm';
 import { fmtMoney } from '@/lib/format';
-import { monthLabel, niceDate } from '@/lib/dates';
+import { monthLabel } from '@/lib/dates';
 import {
   getBudgetMonthHistory,
   getDailyBudget,
   getMonthlyAvailable,
   getTotalBills,
-  getWishAffordability,
   isBillPaid,
 } from '@/lib/selectors';
 import { useFinanceStore } from '@/store/useFinanceStore';
@@ -121,17 +118,11 @@ export default function BudgetScreen() {
   const toggleBillPaid = useFinanceStore((s) => s.toggleBillPaid);
   const recordDebtPayment = useFinanceStore((s) => s.recordDebtPayment);
   const transactions = useFinanceStore((s) => s.transactions);
-  const wishes = useFinanceStore((s) => s.wishes);
-  const savings = useFinanceStore((s) => s.savings);
-  const removeWish = useFinanceStore((s) => s.removeWish);
-  const buyWish = useFinanceStore((s) => s.buyWish);
-  const setSalaryDay = useFinanceStore((s) => s.setSalaryDay);
 
   const monthlyAvailable = getMonthlyAvailable(settings, bills, debts);
   const dailyBudget = getDailyBudget(settings, bills, debts);
   const totalBills = getTotalBills(bills);
   const monthHistory = getBudgetMonthHistory(transactions, debts);
-  const wishPlan = getWishAffordability(transactions, settings, bills, debts, savings);
 
   return (
     <PocketPop>
@@ -305,108 +296,6 @@ export default function BudgetScreen() {
           <Text style={styles.hint}>Tap a debt to record a payment · hold to remove</Text>
         )}
       </View>
-
-      <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Wishlist</Text>
-        <Pressable style={styles.addSmallBtn} onPress={() => router.push('/new-wish')}>
-          <Plus size={14} color={colors.white} weight="bold" />
-        </Pressable>
-      </View>
-
-      <View style={styles.salaryCard}>
-        <View style={[styles.controlIconTile, { backgroundColor: colors.blueBgSoft }]}>
-          <CalendarDots size={21} color={colors.blue} weight="fill" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.salaryTitle}>
-            Next salary {niceDate(wishPlan.nextSalaryDate)}
-            <Text style={styles.salaryDays}> · in {wishPlan.daysToSalary} day{wishPlan.daysToSalary === 1 ? '' : 's'}</Text>
-          </Text>
-          <Text style={styles.salarySub}>
-            Free for wishes: {fmtMoney(Math.max(0, wishPlan.freeForWishes))} · paid on day{' '}
-            {settings.salaryDay}
-          </Text>
-        </View>
-        <View style={styles.stepperBtns}>
-          <Pressable style={styles.minusBtn} onPress={() => setSalaryDay(settings.salaryDay - 1)}>
-            <Minus size={16} color={colors.textSecondary} weight="bold" />
-          </Pressable>
-          <Pressable style={styles.plusBtn} onPress={() => setSalaryDay(settings.salaryDay + 1)}>
-            <Plus size={16} color={colors.white} weight="bold" />
-          </Pressable>
-        </View>
-      </View>
-      <Text style={styles.hint}>
-        Reserved until then: bills {fmtMoney(wishPlan.reserved.bills)} · debt{' '}
-        {fmtMoney(wishPlan.reserved.debt)} · savings {fmtMoney(wishPlan.reserved.savings)} · daily
-        life {fmtMoney(wishPlan.reserved.daily)}
-      </Text>
-
-      {wishes.length === 0 ? (
-        <View style={[styles.emptyCard, { marginTop: 9 }]}>
-          <Text style={styles.emptyText}>
-            Add something you're dreaming of — Pocket will tell you when you can buy it
-            without hurting the rest of your month.
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.wishList}>
-          {wishes.map((w) => {
-            const leftover = wishPlan.freeForWishes - w.price;
-            const ok = leftover >= 0;
-            return (
-              <Pressable
-                key={w.id}
-                style={styles.wishCard}
-                onLongPress={() =>
-                  confirmAction('Remove wish?', `Delete "${w.name}" from your wishlist.`, () =>
-                    removeWish(w.id),
-                  )
-                }>
-                <View style={styles.wishRow}>
-                  <View style={[styles.controlIconTile, { backgroundColor: colors.greenIconTileBg }]}>
-                    <Sparkle size={21} color={colors.greenIconTileFg} weight="fill" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.wishName}>{w.name}</Text>
-                    <Text style={styles.wishPrice}>{fmtMoney(w.price)}</Text>
-                  </View>
-                  {ok && (
-                    <Pressable
-                      style={styles.buyBtn}
-                      onPress={() =>
-                        confirmAction(
-                          'Buy it?',
-                          `Spend ${fmtMoney(w.price)} on "${w.name}"? It will be added to your expenses.`,
-                          () => buyWish(w.id),
-                        )
-                      }>
-                      <ShoppingCart size={15} color={colors.white} weight="fill" />
-                      <Text style={styles.buyBtnText}>Buy</Text>
-                    </Pressable>
-                  )}
-                </View>
-                <View
-                  style={[
-                    styles.wishVerdict,
-                    { backgroundColor: ok ? colors.greenBgSoft : colors.redBgSoft },
-                  ]}>
-                  <Text
-                    style={[
-                      styles.wishVerdictText,
-                      { color: ok ? colors.greenDark : colors.redDark },
-                    ]}>
-                    {ok
-                      ? `You can buy this — ${fmtMoney(leftover)} still free until your salary`
-                      : `Short by ${fmtMoney(-leftover)} — easier after your salary in ${wishPlan.daysToSalary} day${wishPlan.daysToSalary === 1 ? '' : 's'}`}
-                  </Text>
-                </View>
-              </Pressable>
-            );
-          })}
-          <Text style={styles.hint}>Hold a wish to remove it</Text>
-        </View>
-      )}
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Monthly history</Text>
@@ -605,52 +494,6 @@ const useStyles = themedStyles((colors) => StyleSheet.create({
   billNamePaid: { color: colors.textMuted, textDecorationLine: 'line-through' },
   billDue: { fontFamily: fonts.semiBold, fontSize: 11, color: colors.textMuted },
   billAmount: { ...type.cardLabel, color: colors.textPrimary },
-
-  salaryCard: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  salaryTitle: { ...type.rowTitle, color: colors.textPrimary },
-  salaryDays: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.textMuted },
-  salarySub: { ...type.rowSubtitle, color: colors.textMuted, marginTop: 1 },
-
-  wishList: { gap: 9, marginTop: 9 },
-  wishCard: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  wishRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  wishName: { ...type.rowTitle, color: colors.textPrimary },
-  wishPrice: { fontFamily: fonts.extraBold, fontSize: 17, color: colors.textPrimary, marginTop: 1 },
-  buyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.green,
-    borderRadius: 13,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-  },
-  buyBtnText: { fontFamily: fonts.extraBold, fontSize: 13, color: colors.white },
-  wishVerdict: {
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 11,
-    marginTop: 11,
-  },
-  wishVerdictText: { fontFamily: fonts.extraBold, fontSize: 12, lineHeight: 17 },
 
   historyList: { gap: 9 },
   historyCard: {

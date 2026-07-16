@@ -21,13 +21,13 @@ export default function TabsLayout() {
             <Icon sf="house.fill" />
             <Label>Home</Label>
           </NativeTabs.Trigger>
-          <NativeTabs.Trigger name="daily">
-            <Icon sf="calendar" />
-            <Label>Daily</Label>
+          <NativeTabs.Trigger name="history">
+            <Icon sf="clock.arrow.circlepath" />
+            <Label>History</Label>
           </NativeTabs.Trigger>
-          <NativeTabs.Trigger name="weekly">
-            <Icon sf="chart.bar.fill" />
-            <Label>Weekly</Label>
+          <NativeTabs.Trigger name="goals">
+            <Icon sf="target" />
+            <Label>Goals</Label>
           </NativeTabs.Trigger>
           <NativeTabs.Trigger name="budget">
             <Icon sf="wallet.bifold.fill" />
@@ -49,8 +49,8 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.background },
       }}>
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="daily" />
-      <Tabs.Screen name="weekly" />
+      <Tabs.Screen name="history" />
+      <Tabs.Screen name="goals" />
       <Tabs.Screen name="budget" />
     </Tabs>
   );

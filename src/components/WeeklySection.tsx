@@ -8,13 +8,10 @@ import {
   TrendUp,
 } from 'phosphor-react-native';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DayHistoryCard } from '@/components/DayHistoryCard';
 import { PhosphorIcon } from '@/components/PhosphorIcon';
-import { PocketPop } from '@/components/PocketPop';
-import { useTabBarClearance } from '@/components/TabBar';
 import { last7Days, monthLabel, niceDate, todayISO } from '@/lib/dates';
 import { fmtMoney } from '@/lib/format';
 import {
@@ -31,11 +28,10 @@ import { fonts, type } from '@/theme/typography';
 
 const MAX_BAR_HEIGHT = 118;
 
-export default function WeeklyScreen() {
+/** Weekly view of the History tab: 7-day chart, top categories, monthly history. */
+export function WeeklySection() {
   const colors = useColors();
   const styles = useStyles();
-  const insets = useSafeAreaInsets();
-  const tabClearance = useTabBarClearance();
   const transactions = useFinanceStore((s) => s.transactions);
   const categories = useFinanceStore((s) => s.categories);
   // Subscribed so amounts re-format when the user changes region/currency.
@@ -55,12 +51,7 @@ export default function WeeklyScreen() {
   const monthHistory = month ? getMonthHistory(transactions, month) : null;
 
   return (
-    <PocketPop>
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: tabClearance }]}
-      showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Weekly check</Text>
+    <>
       <Text style={styles.subtitle}>
         {niceDate(weekStart)} – {niceDate(todayISO())}
       </Text>
@@ -197,15 +188,11 @@ export default function WeeklyScreen() {
           </Text>
         </View>
       )}
-    </ScrollView>
-    </PocketPop>
+    </>
   );
 }
 
 const useStyles = themedStyles((colors) => StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  content: { paddingHorizontal: 20, paddingBottom: 32 },
-  title: { ...type.screenTitle, color: colors.textPrimary, marginTop: 6, marginHorizontal: 2 },
   subtitle: { ...type.cardLabel, color: colors.textMuted, marginHorizontal: 2, marginBottom: 14 },
 
   chartCard: {

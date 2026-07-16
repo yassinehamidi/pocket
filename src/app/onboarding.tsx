@@ -50,13 +50,13 @@ const SLIDES: Slide[] = [
     key: 'daily',
     icon: CalendarCheck,
     title: 'Check in daily',
-    body: 'The Daily tab shows how much is safe to spend today, and a ring that fills as you spend. Log how the day felt with the mood picker.',
+    body: 'The History tab’s Daily view shows how much is safe to spend today, and a ring that fills as you spend. Log how the day felt with the mood picker.',
   },
   {
     key: 'weekly',
     icon: ChartBar,
     title: 'See your week',
-    body: 'The Weekly tab charts your last 7 days, compares them to the week before, and shows where the money actually went.',
+    body: 'Switch History to Weekly to chart your last 7 days, compare them to the week before, and see where the money actually went.',
   },
   {
     key: 'budget',

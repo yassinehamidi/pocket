@@ -1,6 +1,7 @@
 import { getCategory } from '@/data/categories';
 import {
   billCycleISO,
+  daysAgoISO,
   daysUntil,
   last7Days,
   monthISO,
@@ -344,6 +345,48 @@ export function getDebtLeftThisMonth(debts: Debt[]): number {
       .reduce((x, p) => x + p.amount, 0);
     return a + Math.max(0, Math.min(d.monthly, d.total) - paidThisMonth);
   }, 0);
+}
+
+export interface NoSpendStats {
+  /** Days this month with zero discretionary spending (today not counted — it isn't over). */
+  count: number;
+  /** Longest run of consecutive no-spend days in that window. */
+  bestStreak: number;
+}
+
+/**
+ * No-spend days this month. Bill payments don't break a no-spend day (they're
+ * planned money, see isBillPaymentTx). Days before the user's first recorded
+ * transaction don't count, so a fresh account doesn't start with a fake
+ * perfect month.
+ */
+export function getNoSpendStats(transactions: Transaction[]): NoSpendStats {
+  if (transactions.length === 0) return { count: 0, bestStreak: 0 };
+  const firstTracked = transactions.reduce(
+    (min, t) => (t.date < min ? t.date : min),
+    todayISO(),
+  );
+  const monthStart = `${monthISO()}-01`;
+  const start = firstTracked > monthStart ? firstTracked : monthStart;
+  const spentDays = new Set(
+    transactions
+      .filter((t) => t.type === 'out' && !isBillPaymentTx(t))
+      .map((t) => t.date),
+  );
+  const startAgo = -daysUntil(start);
+  let count = 0;
+  let streak = 0;
+  let bestStreak = 0;
+  for (let i = startAgo; i >= 1; i--) {
+    if (spentDays.has(daysAgoISO(i))) {
+      streak = 0;
+    } else {
+      count += 1;
+      streak += 1;
+      bestStreak = Math.max(bestStreak, streak);
+    }
+  }
+  return { count, bestStreak };
 }
 
 export interface WishAffordability {

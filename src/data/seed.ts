@@ -43,8 +43,8 @@ const expensePatterns: { category: CategoryKey; reason: string; base: number }[]
 ];
 
 /**
- * Deterministic 3-month history (days 7–90 back) so Daily/Weekly history
- * screens have something to browse. Some days are skipped on purpose so
+ * Deterministic 3-month history (days 7–90 back) so the History tab
+ * (Daily/Weekly views) has something to browse. Some days are skipped on purpose so
  * the history looks organic, income lands roughly monthly.
  */
 function buildHistory(): Transaction[] {

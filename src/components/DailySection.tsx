@@ -1,11 +1,8 @@
 import { CheckCircle, Confetti, Warning } from 'phosphor-react-native';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { DayHistoryCard } from '@/components/DayHistoryCard';
-import { PocketPop } from '@/components/PocketPop';
-import { useTabBarClearance } from '@/components/TabBar';
 import { TransactionRow } from '@/components/TransactionRow';
 import { niceDate, todayISO } from '@/lib/dates';
 import { fmtMoney } from '@/lib/format';
@@ -72,11 +69,10 @@ function ProgressRing({ pct, segments }: { pct: number; segments: DaySegment[] }
   );
 }
 
-export default function DailyScreen() {
+/** Daily view of the History tab: today's ring, spending, and past days. */
+export function DailySection() {
   const colors = useColors();
   const styles = useStyles();
-  const insets = useSafeAreaInsets();
-  const tabClearance = useTabBarClearance();
   const transactions = useFinanceStore((s) => s.transactions);
   const bills = useFinanceStore((s) => s.bills);
   const debts = useFinanceStore((s) => s.debts);
@@ -92,12 +88,7 @@ export default function DailyScreen() {
   const over = todaySpent > dailyBudget;
 
   return (
-    <PocketPop>
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: tabClearance }]}
-      showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Daily check</Text>
+    <>
       <Text style={styles.subtitle}>Today · {niceDate(todayISO())}</Text>
 
       <View style={styles.ringWrap}>
@@ -140,7 +131,7 @@ export default function DailyScreen() {
         </View>
       )}
 
-      <Text style={styles.sectionTitle}>History</Text>
+      <Text style={styles.sectionTitle}>Past days</Text>
       {history.length > 0 ? (
         <View style={styles.txList}>
           {history.map((day) => (
@@ -154,15 +145,11 @@ export default function DailyScreen() {
           </Text>
         </View>
       )}
-    </ScrollView>
-    </PocketPop>
+    </>
   );
 }
 
 const useStyles = themedStyles((colors) => StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  content: { paddingHorizontal: 20, paddingBottom: 32 },
-  title: { ...type.screenTitle, color: colors.textPrimary, marginTop: 6, marginHorizontal: 2 },
   subtitle: { ...type.cardLabel, color: colors.textMuted, marginHorizontal: 2, marginBottom: 14 },
 
   ringWrap: { alignItems: 'center', justifyContent: 'center', marginVertical: 6 },

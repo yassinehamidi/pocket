@@ -105,32 +105,39 @@ export default function HomeScreen() {
           {hide ? `•••• ${currencySymbol()}` : fmtMoney(balance)}
         </Text>
 
-        <Pressable style={styles.savedRow} onPress={() => setSavingsOpen(true)}>
-          <PiggyBank size={17} color={colors.white} weight="fill" />
-          <Text style={styles.savedLabel}>Saved</Text>
-          <Text style={styles.savedValue}>
-            {hide ? `•••• ${currencySymbol()}` : fmtMoney(saved)}
-          </Text>
-          <View style={styles.savedManage}>
-            <Plus size={13} color={colors.white} weight="bold" />
-          </View>
-        </Pressable>
+        <View style={styles.cardDivider} />
 
         <View style={styles.statRow}>
           <View style={styles.statBox}>
             <View style={styles.statLabelRow}>
               <ArrowCircleDown size={13} color={colors.white} weight="fill" />
-              <Text style={styles.statLabel}>In this week</Text>
+              <Text style={styles.statLabel}>Week in</Text>
             </View>
-            <Text style={styles.statValue}>{fmtMoney(weekIn)}</Text>
+            <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+              {fmtMoney(weekIn)}
+            </Text>
           </View>
           <View style={styles.statBox}>
             <View style={styles.statLabelRow}>
               <ArrowCircleUp size={13} color={colors.white} weight="fill" />
-              <Text style={styles.statLabel}>Out this week</Text>
+              <Text style={styles.statLabel}>Week out</Text>
             </View>
-            <Text style={styles.statValue}>{fmtMoney(weekOut)}</Text>
+            <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+              {fmtMoney(weekOut)}
+            </Text>
           </View>
+          <Pressable style={styles.statBox} onPress={() => setSavingsOpen(true)}>
+            <View style={styles.statLabelRow}>
+              <PiggyBank size={13} color={colors.white} weight="fill" />
+              <Text style={styles.statLabel}>Saved</Text>
+            </View>
+            <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+              {hide ? `•••• ${currencySymbol()}` : fmtMoney(saved)}
+            </Text>
+            <View style={styles.savedManage}>
+              <Plus size={11} color={colors.white} weight="bold" />
+            </View>
+          </Pressable>
         </View>
         {(bills.length > 0 || debtPctLeft !== null) && (
           <View style={styles.metaRow}>
@@ -257,40 +264,30 @@ const useStyles = themedStyles((colors) => StyleSheet.create({
   balanceLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   balanceLabel: { ...type.cardLabel, color: colors.white, opacity: 0.9 },
   balanceValue: { ...type.balance, color: colors.white, marginTop: 6 },
-  savedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginTop: 12,
-  },
-  savedLabel: { ...type.tinyLabel, color: colors.white, opacity: 0.9 },
-  savedValue: { fontFamily: fonts.extraBold, fontSize: 14.5, color: colors.white },
+  cardDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.22)', marginTop: 16 },
   savedManage: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 2,
   },
-  statRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  statRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
   statBox: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.16)',
     borderRadius: 16,
     paddingVertical: 11,
-    paddingHorizontal: 13,
+    paddingHorizontal: 11,
   },
-  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   statLabel: { ...type.tinyLabel, color: colors.white, opacity: 0.9 },
-  statValue: { fontFamily: type.statValue.fontFamily, fontSize: 17, color: colors.white, marginTop: 3 },
-  metaRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  statValue: { fontFamily: type.statValue.fontFamily, fontSize: 16, color: colors.white, marginTop: 3 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
   metaChip: {
     flexDirection: 'row',
     alignItems: 'center',

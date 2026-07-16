@@ -2,11 +2,11 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
-  CalendarCheck,
-  ChartBar,
+  ClockCounterClockwise,
   House,
   Icon,
   Plus,
+  Target,
   Wallet,
 } from 'phosphor-react-native';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -17,8 +17,8 @@ import { fonts } from '@/theme/typography';
 
 const TABS: { name: string; label: string; icon: Icon }[] = [
   { name: 'index', label: 'Home', icon: House },
-  { name: 'daily', label: 'Daily', icon: CalendarCheck },
-  { name: 'weekly', label: 'Weekly', icon: ChartBar },
+  { name: 'history', label: 'History', icon: ClockCounterClockwise },
+  { name: 'goals', label: 'Goals', icon: Target },
   { name: 'budget', label: 'Budget', icon: Wallet },
 ];
 
