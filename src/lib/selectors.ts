@@ -15,6 +15,7 @@ import {
   Category,
   CategoryKey,
   Debt,
+  SavingsChallenge,
   SavingsEntry,
   Transaction,
   UserSettings,
@@ -79,16 +80,6 @@ export function getDebtPercentLeft(debts: Debt[]): number | null {
   return Math.round((remaining / original) * 100);
 }
 
-/** What's left of salary after bills, debt payments, and the savings goal. */
-export function getMonthlyAvailable(settings: UserSettings, bills: Bill[], debts: Debt[]): number {
-  return settings.salary - getTotalBills(bills) - getTotalDebtMonthly(debts) - settings.savingsGoal;
-}
-
-/** Daily budget = (salary − bills − debt − savings) / 31 */
-export function getDailyBudget(settings: UserSettings, bills: Bill[], debts: Debt[]): number {
-  return Math.max(0, getMonthlyAvailable(settings, bills, debts)) / 31;
-}
-
 /**
  * Auto-created bill payments (id "bill-<billId>-<cycle>", written by
  * toggleBillPaid) are already reserved by the monthly plan (salary − bills −
@@ -108,13 +99,99 @@ export function getTodaySpent(transactions: Transaction[]): number {
     .reduce((a, t) => a + t.amount, 0);
 }
 
-export function getSafeToSpendToday(
+export interface SpendPlan {
+  /** Spendable balance right now (savings pot excluded). */
+  balance: number;
+  /** Money held back until the next payday. */
+  reserved: { bills: number; debt: number; challenge: number };
+  /** balance − reservations, right now (negative = over plan). */
+  freeUntilPayday: number;
+  daysToPayday: number;
+  /** ISO date of the next payday. */
+  nextPaydayDate: string;
+  spentToday: number;
+  /** Today's allowance: start-of-day free money spread over the days left. */
+  dailyBudget: number;
+  /** dailyBudget − spentToday (negative = over today's budget). */
+  safeToSpendToday: number;
+}
+
+/**
+ * The core money algorithm. Everything starts from the REAL balance (salary
+ * only counts once its arrival is confirmed): reserve what must survive until
+ * the next payday — unpaid bills, debt payments not yet made, the savings
+ * challenge target — and spread the remainder over the days left. Overspend
+ * today and tomorrow's budget shrinks; underspend and it grows.
+ *
+ * The daily allowance is anchored to the start of the day (spentToday is
+ * added back before dividing) so the Daily ring fills against a stable
+ * number instead of shrinking while you spend.
+ */
+export function getSpendPlan(
   transactions: Transaction[],
   settings: UserSettings,
   bills: Bill[],
   debts: Debt[],
-): number {
-  return getDailyBudget(settings, bills, debts) - getTodaySpent(transactions);
+  savings: SavingsEntry[],
+  challenge: SavingsChallenge | null,
+): SpendPlan {
+  const nextPaydayDate = nextSalaryISO(settings.salaryDay);
+  const daysToPayday = Math.max(1, daysUntil(nextPaydayDate));
+  const reserved = {
+    bills: getUnpaidBillsTotal(bills),
+    debt: getDebtLeftThisMonth(debts),
+    // 'lock' challenges already moved their money into the savings pot,
+    // so only 'reserve' ones hold a slice of the balance back.
+    challenge: challenge?.mode === 'reserve' ? challenge.target : 0,
+  };
+  const balance = getBalance(transactions, settings, savings);
+  const freeUntilPayday = balance - reserved.bills - reserved.debt - reserved.challenge;
+  const spentToday = getTodaySpent(transactions);
+  const dailyBudget = Math.max(0, freeUntilPayday + spentToday) / daysToPayday;
+  return {
+    balance,
+    reserved,
+    freeUntilPayday,
+    daysToPayday,
+    nextPaydayDate,
+    spentToday,
+    dailyBudget,
+    safeToSpendToday: dailyBudget - spentToday,
+  };
+}
+
+export interface ChallengeProgress {
+  /** How much of the target is still safe (0..target). */
+  protectedAmount: number;
+  /** 0–100 */
+  pct: number;
+  onTrack: boolean;
+}
+
+/**
+ * How much of the challenge target is still intact. 'lock' targets sit in
+ * the savings pot, so they're always fully protected; 'reserve' targets are
+ * covered only as far as the current balance stretches after bills and debt.
+ */
+export function getChallengeProgress(
+  transactions: Transaction[],
+  settings: UserSettings,
+  bills: Bill[],
+  debts: Debt[],
+  savings: SavingsEntry[],
+  challenge: SavingsChallenge,
+): ChallengeProgress {
+  if (challenge.mode === 'lock' || challenge.target <= 0) {
+    return { protectedAmount: challenge.target, pct: 100, onTrack: true };
+  }
+  const balance = getBalance(transactions, settings, savings);
+  const afterCommitments = balance - getUnpaidBillsTotal(bills) - getDebtLeftThisMonth(debts);
+  const protectedAmount = Math.max(0, Math.min(challenge.target, afterCommitments));
+  return {
+    protectedAmount,
+    pct: Math.round((protectedAmount / challenge.target) * 100),
+    onTrack: protectedAmount >= challenge.target,
+  };
 }
 
 export interface WeekDayBar {
@@ -390,21 +467,23 @@ export function getNoSpendStats(transactions: Transaction[]): NoSpendStats {
 }
 
 export interface WishAffordability {
-  /** Money free for wishes right now, after every reservation (can be negative). */
+  /** Free money until payday, after bills/debt/challenge (can be negative). */
+  freeUntilPayday: number;
+  /** What can safely go to wishes: up to half the free money. */
   freeForWishes: number;
   daysToSalary: number;
   /** ISO date of the next salary. */
   nextSalaryDate: string;
   /** What is being held back from the balance until the next salary. */
-  reserved: { bills: number; debt: number; savings: number; daily: number };
+  reserved: { bills: number; debt: number; challenge: number; dailyLife: number };
 }
 
 /**
  * Can a wish be bought today without wrecking the rest of the month?
- * Start from the real balance and reserve everything still owed before the
- * next salary: unpaid bills, debt payments not yet made this month, the
- * monthly savings goal, and the normal daily budget for each remaining day.
- * Whatever is left is free to spend on wishes.
+ * Wishes draw from the same free-until-payday pool as daily spending, so at
+ * most HALF of it may go to wishes — the other half stays protected for
+ * daily life. Simple, explainable, and it keeps a wish purchase from
+ * flattening the daily budget to zero.
  */
 export function getWishAffordability(
   transactions: Transaction[],
@@ -412,22 +491,16 @@ export function getWishAffordability(
   bills: Bill[],
   debts: Debt[],
   savings: SavingsEntry[],
+  challenge: SavingsChallenge | null,
 ): WishAffordability {
-  const nextSalaryDate = nextSalaryISO(settings.salaryDay);
-  const daysToSalary = Math.max(0, daysUntil(nextSalaryDate));
-  const reserved = {
-    bills: getUnpaidBillsTotal(bills),
-    debt: getDebtLeftThisMonth(debts),
-    savings: settings.savingsGoal,
-    daily: getDailyBudget(settings, bills, debts) * daysToSalary,
-  };
-  // Spendable balance only — the savings pot is never wish money.
-  const balance = getBalance(transactions, settings, savings);
+  const plan = getSpendPlan(transactions, settings, bills, debts, savings, challenge);
+  const free = Math.max(0, plan.freeUntilPayday);
+  const freeForWishes = Math.floor(free / 2);
   return {
-    freeForWishes:
-      balance - reserved.bills - reserved.debt - reserved.savings - reserved.daily,
-    daysToSalary,
-    nextSalaryDate,
-    reserved,
+    freeUntilPayday: plan.freeUntilPayday,
+    freeForWishes,
+    daysToSalary: plan.daysToPayday,
+    nextSalaryDate: plan.nextPaydayDate,
+    reserved: { ...plan.reserved, dailyLife: free - freeForWishes },
   };
 }

@@ -5,13 +5,17 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { DEFAULT_CATEGORIES } from '@/data/categories';
 import { DEFAULT_CURRENCY, DEFAULT_REGION, getRegion } from '@/data/currencies';
 import { seedBills, seedDebts, seedSavings, seedSettings, seedTransactions, seedWishes } from '@/data/seed';
-import { billCycleISO, todayISO } from '@/lib/dates';
+import { billCycleISO, lastSalaryISO, salaryCycleISO, todayISO } from '@/lib/dates';
 import { setActiveCurrency } from '@/lib/format';
+import { getBalance } from '@/lib/selectors';
 import {
   Bill,
   Category,
   CategoryKey,
+  ChallengeMode,
+  ChallengeResult,
   Debt,
+  SavingsChallenge,
   ThemeMode,
   Transaction,
   TransactionType,
@@ -43,6 +47,12 @@ interface FinanceState {
   /** Moves between the spendable balance and the savings pot. */
   savings: SavingsEntry[];
   settings: UserSettings;
+  /** The current pay cycle's savings challenge, if one is running. */
+  challenge: SavingsChallenge | null;
+  /** Outcome of the last finished challenge — shown until a new one starts. */
+  lastChallengeResult: ChallengeResult | null;
+  /** Pay cycle (YYYY-MM) the user dismissed the salary prompt for. */
+  skippedSalaryCycle: string | null;
 
   /** Creates a category and returns its generated key. */
   addCategory: (input: {
@@ -81,6 +91,22 @@ interface FinanceState {
   buyWish: (id: string) => void;
   /** Sets the day of month (1–31) the salary arrives. */
   setSalaryDay: (day: number) => void;
+  /**
+   * Confirms the salary landed this cycle: settles any challenge left over
+   * from the previous cycle, then records the income (dated on the payday).
+   */
+  confirmSalary: (amount: number) => void;
+  /** Dismisses this cycle's salary prompt without adding income. */
+  skipSalary: () => void;
+  /**
+   * Starts this cycle's savings challenge. 'reserve' keeps the target in the
+   * balance but protected; 'lock' moves it into the savings pot immediately.
+   */
+  setChallenge: (target: number, mode: ChallengeMode) => void;
+  /** Abandons the challenge ('lock' money returns to the balance). */
+  cancelChallenge: () => void;
+  /** Settles a challenge whose pay cycle has ended (call on screen focus). */
+  settleStaleChallenge: () => void;
   /** Moves money from the spendable balance into the savings pot. */
   depositSavings: (amount: number) => void;
   /** Takes money back out of the savings pot into the balance. */
@@ -102,6 +128,36 @@ interface FinanceState {
 }
 
 /**
+ * Closes out a challenge whose pay cycle has ended. A 'lock' target already
+ * sits in the savings pot; a 'reserve' target banks whatever actually
+ * survived in the balance (capped at the target). Runs BEFORE the new
+ * salary is added, so the leftover measured is genuinely last cycle's.
+ */
+function settleChallenge(s: {
+  challenge: SavingsChallenge | null;
+  transactions: Transaction[];
+  savings: SavingsEntry[];
+  settings: UserSettings;
+}): Partial<{ savings: SavingsEntry[]; challenge: null; lastChallengeResult: ChallengeResult }> {
+  const chal = s.challenge;
+  if (!chal || chal.cycle === salaryCycleISO(s.settings.salaryDay)) return {};
+  let saved = chal.target;
+  let savings = s.savings;
+  if (chal.mode === 'reserve') {
+    const balance = getBalance(s.transactions, s.settings, s.savings);
+    saved = Math.max(0, Math.min(chal.target, balance));
+    if (saved > 0) {
+      savings = [{ id: `s${Date.now()}`, amount: saved, date: todayISO() }, ...s.savings];
+    }
+  }
+  return {
+    savings,
+    challenge: null,
+    lastChallengeResult: { cycle: chal.cycle, target: chal.target, saved },
+  };
+}
+
+/**
  * Single source of truth for Pocket, persisted to device storage.
  * Only raw data lives here — balance, budgets, and weekly stats are
  * derived in lib/selectors.ts.
@@ -116,6 +172,9 @@ export const useFinanceStore = create<FinanceState>()(
       wishes: [],
       savings: [],
       settings: FRESH_SETTINGS,
+      challenge: null,
+      lastChallengeResult: null,
+      skippedSalaryCycle: null,
 
       addCategory: (input) => {
         const key = `c${Date.now()}`;
@@ -248,10 +307,88 @@ export const useFinanceStore = create<FinanceState>()(
           },
         })),
 
-      adjustSalary: (delta) =>
+      confirmSalary: (amount) =>
+        set((s) => {
+          if (amount <= 0) return {};
+          const cycle = salaryCycleISO(s.settings.salaryDay);
+          if (s.transactions.some((t) => t.id === `salary-${cycle}`)) return {};
+          const settled = settleChallenge(s);
+          return {
+            ...settled,
+            transactions: [
+              {
+                id: `salary-${cycle}`,
+                type: 'in' as const,
+                amount,
+                category: 'salary',
+                reason: 'Salary',
+                // Dated on the payday itself, even if confirmed a few days late.
+                date: lastSalaryISO(s.settings.salaryDay),
+              },
+              ...s.transactions,
+            ],
+          };
+        }),
+
+      skipSalary: () =>
         set((s) => ({
-          settings: { ...s.settings, salary: Math.max(0, s.settings.salary + delta) },
+          ...settleChallenge(s),
+          skippedSalaryCycle: salaryCycleISO(s.settings.salaryDay),
         })),
+
+      setChallenge: (target, mode) =>
+        set((s) => {
+          if (target <= 0) return {};
+          let savings = s.savings;
+          // Replacing an active 'lock' challenge returns its money first.
+          if (s.challenge?.mode === 'lock') {
+            savings = [
+              { id: `s${Date.now()}r`, amount: -s.challenge.target, date: todayISO() },
+              ...savings,
+            ];
+          }
+          if (mode === 'lock') {
+            savings = [{ id: `s${Date.now()}`, amount: target, date: todayISO() }, ...savings];
+          }
+          return {
+            savings,
+            challenge: {
+              cycle: salaryCycleISO(s.settings.salaryDay),
+              target,
+              mode,
+              createdAt: todayISO(),
+            },
+            lastChallengeResult: null,
+          };
+        }),
+
+      cancelChallenge: () =>
+        set((s) => {
+          if (!s.challenge) return {};
+          const savings =
+            s.challenge.mode === 'lock'
+              ? [
+                  { id: `s${Date.now()}`, amount: -s.challenge.target, date: todayISO() },
+                  ...s.savings,
+                ]
+              : s.savings;
+          return { savings, challenge: null };
+        }),
+
+      settleStaleChallenge: () => set((s) => settleChallenge(s)),
+
+      adjustSalary: (delta) =>
+        set((s) => {
+          const salary = Math.max(0, s.settings.salary + delta);
+          return {
+            settings: { ...s.settings, salary },
+            // First salary ever set mid-cycle: the payday already passed and
+            // that money is part of the start balance — don't ask about it.
+            ...(s.settings.salary <= 0 && salary > 0
+              ? { skippedSalaryCycle: salaryCycleISO(s.settings.salaryDay) }
+              : {}),
+          };
+        }),
 
       adjustSavingsGoal: (delta) =>
         set((s) => ({
@@ -259,7 +396,12 @@ export const useFinanceStore = create<FinanceState>()(
         })),
 
       setSalary: (salary) =>
-        set((s) => ({ settings: { ...s.settings, salary: Math.max(0, salary) } })),
+        set((s) => ({
+          settings: { ...s.settings, salary: Math.max(0, salary) },
+          ...(s.settings.salary <= 0 && salary > 0
+            ? { skippedSalaryCycle: salaryCycleISO(s.settings.salaryDay) }
+            : {}),
+        })),
 
       setSavingsGoal: (savingsGoal) =>
         set((s) => ({ settings: { ...s.settings, savingsGoal: Math.max(0, savingsGoal) } })),
@@ -291,6 +433,9 @@ export const useFinanceStore = create<FinanceState>()(
           debts: seedDebts,
           wishes: seedWishes,
           savings: seedSavings,
+          challenge: null,
+          lastChallengeResult: null,
+          skippedSalaryCycle: null,
           // Sample data uses built-in category keys — restore any the user is
           // missing, but keep their customs and color edits.
           categories: [
@@ -313,6 +458,9 @@ export const useFinanceStore = create<FinanceState>()(
           debts: [],
           wishes: [],
           savings: [],
+          challenge: null,
+          lastChallengeResult: null,
+          skippedSalaryCycle: null,
           categories: DEFAULT_CATEGORIES,
           settings: {
             ...FRESH_SETTINGS,
@@ -326,7 +474,7 @@ export const useFinanceStore = create<FinanceState>()(
     {
       name: 'pocket-finance',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 7,
+      version: 8,
       migrate: (persisted: unknown) => {
         // v0 → v1: settings gained region/currency.
         // v1 → v2: debts gained originalTotal (assume current total).
@@ -335,6 +483,8 @@ export const useFinanceStore = create<FinanceState>()(
         // v4 → v5: categories moved into the store (colored, user-editable).
         // v5 → v6: wishes added; settings gained salaryDay (default 1 via FRESH_SETTINGS).
         // v6 → v7: savings pot entries added.
+        // v7 → v8: salary confirmation + savings challenge (challenge,
+        //          lastChallengeResult, skippedSalaryCycle).
         const state = persisted as {
           settings?: Partial<UserSettings>;
           bills?: Bill[];
@@ -342,12 +492,18 @@ export const useFinanceStore = create<FinanceState>()(
           categories?: Category[];
           wishes?: Wish[];
           savings?: SavingsEntry[];
+          challenge?: SavingsChallenge | null;
+          lastChallengeResult?: ChallengeResult | null;
+          skippedSalaryCycle?: string | null;
         };
         if (!state.categories || state.categories.length === 0) {
           state.categories = DEFAULT_CATEGORIES;
         }
         state.wishes = state.wishes ?? [];
         state.savings = state.savings ?? [];
+        state.challenge = state.challenge ?? null;
+        state.lastChallengeResult = state.lastChallengeResult ?? null;
+        state.skippedSalaryCycle = state.skippedSalaryCycle ?? null;
         if (state?.settings) {
           state.settings = { ...FRESH_SETTINGS, ...state.settings };
         }
@@ -371,6 +527,9 @@ export const useFinanceStore = create<FinanceState>()(
         wishes: s.wishes,
         savings: s.savings,
         settings: s.settings,
+        challenge: s.challenge,
+        lastChallengeResult: s.lastChallengeResult,
+        skippedSalaryCycle: s.skippedSalaryCycle,
       }),
       onRehydrateStorage: () => (state) => {
         setActiveCurrency(state?.settings.currency);

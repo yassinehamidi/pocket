@@ -62,7 +62,7 @@ const SLIDES: Slide[] = [
     key: 'budget',
     icon: PiggyBank,
     title: 'Plan your budget',
-    body: 'Set your salary, savings goal, fixed bills, and debts in the Budget tab. Pocket splits what’s left into a daily budget for you.',
+    body: 'Set your salary, fixed bills, and debts in the Budget tab. On payday, confirm the salary really landed — then Pocket plans a daily budget from your real balance and your savings challenge.',
   },
 ];
 

@@ -11,23 +11,22 @@ import {
   Receipt,
   Wallet,
 } from 'phosphor-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PocketPop } from '@/components/PocketPop';
+import { SalaryConfirmCard } from '@/components/SalaryConfirmCard';
 import { SavingsSheet } from '@/components/SavingsSheet';
 import { useTabBarClearance } from '@/components/TabBar';
 import { TransactionRow } from '@/components/TransactionRow';
 import { currencySymbol, fmtMoney, fmtMoneySigned } from '@/lib/format';
 import {
-  getBalance,
   getBillsLeft,
-  getDailyBudget,
   getDebtPercentLeft,
   getRecentTransactions,
-  getSafeToSpendToday,
   getSavedTotal,
+  getSpendPlan,
   getWeekTotals,
 } from '@/lib/selectors';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -53,15 +52,21 @@ export default function HomeScreen() {
   const debts = useFinanceStore((s) => s.debts);
   const savings = useFinanceStore((s) => s.savings);
   const settings = useFinanceStore((s) => s.settings);
+  const challenge = useFinanceStore((s) => s.challenge);
+  const settleStaleChallenge = useFinanceStore((s) => s.settleStaleChallenge);
   const accountName = useAuthStore((s) => s.account?.name);
   const displayName = accountName || settings.userName || 'there';
   const [savingsOpen, setSavingsOpen] = useState(false);
 
-  const balance = getBalance(transactions, settings, savings);
+  // Bank a finished challenge as soon as the app is opened in a new cycle.
+  useEffect(() => {
+    settleStaleChallenge();
+  }, [settleStaleChallenge]);
+
+  const plan = getSpendPlan(transactions, settings, bills, debts, savings, challenge);
+  const balance = plan.balance;
   const saved = getSavedTotal(savings);
   const { weekIn, weekOut } = getWeekTotals(transactions);
-  const dailyBudget = getDailyBudget(settings, bills, debts);
-  const safe = getSafeToSpendToday(transactions, settings, bills, debts);
   const recent = getRecentTransactions(transactions);
   const billsLeft = getBillsLeft(bills);
   const debtPctLeft = getDebtPercentLeft(debts);
@@ -89,6 +94,8 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       </View>
+
+      <SalaryConfirmCard />
 
       <LinearGradient
         colors={colors.greenGradient}
@@ -168,14 +175,22 @@ export default function HomeScreen() {
           <Coins size={22} color={colors.greenDark} weight="fill" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.safeLabel}>Safe to spend today</Text>
-          <Text style={[styles.safeValue, { color: safe >= 0 ? colors.green : colors.red }]}>
-            {fmtMoneySigned(safe)}
+          <Text style={styles.safeLabel}>
+            {challenge ? 'Safe to spend (goal protected)' : 'Safe to spend today'}
+          </Text>
+          <Text
+            style={[
+              styles.safeValue,
+              { color: plan.safeToSpendToday >= 0 ? colors.green : colors.red },
+            ]}>
+            {fmtMoneySigned(plan.safeToSpendToday)}
           </Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={styles.safeBudgetLabel}>daily budget</Text>
-          <Text style={styles.safeBudgetValue}>{fmtMoney(dailyBudget)}</Text>
+          <Text style={styles.safeBudgetLabel}>
+            per day · {plan.daysToPayday}d to payday
+          </Text>
+          <Text style={styles.safeBudgetValue}>{fmtMoney(plan.dailyBudget)}</Text>
         </View>
       </View>
 

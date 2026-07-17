@@ -22,8 +22,7 @@ import { fmtMoney } from '@/lib/format';
 import { monthLabel } from '@/lib/dates';
 import {
   getBudgetMonthHistory,
-  getDailyBudget,
-  getMonthlyAvailable,
+  getSpendPlan,
   getTotalBills,
   isBillPaid,
 } from '@/lib/selectors';
@@ -118,9 +117,10 @@ export default function BudgetScreen() {
   const toggleBillPaid = useFinanceStore((s) => s.toggleBillPaid);
   const recordDebtPayment = useFinanceStore((s) => s.recordDebtPayment);
   const transactions = useFinanceStore((s) => s.transactions);
+  const savings = useFinanceStore((s) => s.savings);
+  const challenge = useFinanceStore((s) => s.challenge);
 
-  const monthlyAvailable = getMonthlyAvailable(settings, bills, debts);
-  const dailyBudget = getDailyBudget(settings, bills, debts);
+  const plan = getSpendPlan(transactions, settings, bills, debts, savings, challenge);
   const totalBills = getTotalBills(bills);
   const monthHistory = getBudgetMonthHistory(transactions, debts);
 
@@ -138,16 +138,17 @@ export default function BudgetScreen() {
         end={{ x: 0.9, y: 1 }}
         style={styles.availableCard}>
         <View style={styles.deco} />
-        <Text style={styles.availableLabel}>You can spend this month</Text>
-        <Text style={styles.availableValue}>{fmtMoney(monthlyAvailable)}</Text>
+        <Text style={styles.availableLabel}>Free to spend until payday</Text>
+        <Text style={styles.availableValue}>{fmtMoney(Math.max(0, plan.freeUntilPayday))}</Text>
         <View style={styles.perDayPill}>
           <SunHorizon size={17} color={colors.white} weight="fill" />
           <Text style={styles.perDayText}>
-            {fmtMoney(dailyBudget)} <Text style={styles.perDaySuffix}>/ day</Text>
+            {fmtMoney(plan.dailyBudget)} <Text style={styles.perDaySuffix}>/ day</Text>
           </Text>
         </View>
         <Text style={styles.availableNote}>
-          Salary − bills − debt − savings, spread over 31 days.
+          Your balance − unpaid bills − debt left − savings challenge, spread over the{' '}
+          {plan.daysToPayday} day{plan.daysToPayday === 1 ? '' : 's'} to payday.
         </Text>
       </LinearGradient>
 
@@ -157,7 +158,7 @@ export default function BudgetScreen() {
             <Bank size={21} color={colors.greenDark} weight="fill" />
           </View>
         }
-        label="Monthly salary"
+        label="Monthly salary (confirmed on payday)"
         amount={settings.salary}
         onMinus={() => adjustSalary(-500)}
         onPlus={() => adjustSalary(500)}
@@ -170,7 +171,7 @@ export default function BudgetScreen() {
             <PiggyBank size={21} color={colors.blue} weight="fill" />
           </View>
         }
-        label="Savings goal"
+        label="Default savings goal"
         amount={settings.savingsGoal}
         onMinus={() => adjustSavingsGoal(-100)}
         onPlus={() => adjustSavingsGoal(100)}

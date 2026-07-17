@@ -4,23 +4,63 @@ import {
   CalendarDots,
   Leaf,
   Lightning,
+  LockSimple,
   Minus,
+  PiggyBank,
   Plus,
+  ShieldCheck,
   ShoppingCart,
   Sparkle,
+  Trophy,
 } from 'phosphor-react-native';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PocketPop } from '@/components/PocketPop';
 import { useTabBarClearance } from '@/components/TabBar';
 import { confirmAction } from '@/lib/confirm';
 import { niceDate } from '@/lib/dates';
-import { fmtMoney } from '@/lib/format';
-import { getDailyBudget, getNoSpendStats, getWishAffordability } from '@/lib/selectors';
+import { currencySymbol, fmtMoney } from '@/lib/format';
+import {
+  getChallengeProgress,
+  getNoSpendStats,
+  getSpendPlan,
+  getWishAffordability,
+} from '@/lib/selectors';
+import { ChallengeMode } from '@/lib/types';
 import { useFinanceStore } from '@/store/useFinanceStore';
 import { themedStyles, useColors } from '@/theme/useTheme';
 import { fonts, type } from '@/theme/typography';
+
+/**
+ * Motivational lines per challenge state — one is picked per day so the
+ * screen feels alive without being random on every render.
+ */
+const MESSAGES = {
+  onTrack: [
+    'Fully protected — your future self is smiling.',
+    'Nothing has touched your goal yet. Keep it that way.',
+    'Saving is just paying the person you’ll become.',
+  ],
+  slipping: [
+    'You’ve dipped into the goal — hold the line from today.',
+    'Not lost yet: keep the next days lean and win it back.',
+    'Small trims, big comeback. You’ve got this.',
+  ],
+  gone: [
+    'This month got away — it happens. Next payday is a fresh start.',
+    'Nothing protected right now. Trim spending or add income to claw back.',
+  ],
+  locked: [
+    'Locked away on day one — the strongest move in saving.',
+    'Out of sight, out of temptation. That money is already yours.',
+  ],
+};
+
+function dailyPick(messages: string[]): string {
+  return messages[new Date().getDate() % messages.length];
+}
 
 export default function GoalsScreen() {
   const colors = useColors();
@@ -34,15 +74,44 @@ export default function GoalsScreen() {
   const settings = useFinanceStore((s) => s.settings);
   const savings = useFinanceStore((s) => s.savings);
   const wishes = useFinanceStore((s) => s.wishes);
+  const challenge = useFinanceStore((s) => s.challenge);
+  const lastResult = useFinanceStore((s) => s.lastChallengeResult);
   const removeWish = useFinanceStore((s) => s.removeWish);
   const buyWish = useFinanceStore((s) => s.buyWish);
   const setSalaryDay = useFinanceStore((s) => s.setSalaryDay);
+  const setChallenge = useFinanceStore((s) => s.setChallenge);
+  const cancelChallenge = useFinanceStore((s) => s.cancelChallenge);
+  const settleStaleChallenge = useFinanceStore((s) => s.settleStaleChallenge);
 
-  const wishPlan = getWishAffordability(transactions, settings, bills, debts, savings);
-  const dailyBudget = getDailyBudget(settings, bills, debts);
+  useEffect(() => {
+    settleStaleChallenge();
+  }, [settleStaleChallenge]);
+
+  const plan = getSpendPlan(transactions, settings, bills, debts, savings, challenge);
+  const wishPlan = getWishAffordability(transactions, settings, bills, debts, savings, challenge);
   const noSpend = getNoSpendStats(transactions);
-  const free = wishPlan.freeForWishes;
   const totalWished = wishes.reduce((a, w) => a + w.price, 0);
+
+  const progress = challenge
+    ? getChallengeProgress(transactions, settings, bills, debts, savings, challenge)
+    : null;
+
+  // Challenge setup form state.
+  const [targetDraft, setTargetDraft] = useState<string | null>(null);
+  const [mode, setMode] = useState<ChallengeMode>('reserve');
+  const defaultTarget = settings.savingsGoal > 0 ? String(settings.savingsGoal) : '';
+  const targetValue = parseFloat(targetDraft ?? defaultTarget);
+  const targetValid = !isNaN(targetValue) && targetValue > 0;
+
+  const challengeMessage = challenge
+    ? challenge.mode === 'lock'
+      ? dailyPick(MESSAGES.locked)
+      : progress!.onTrack
+        ? dailyPick(MESSAGES.onTrack)
+        : progress!.protectedAmount > 0
+          ? dailyPick(MESSAGES.slipping)
+          : dailyPick(MESSAGES.gone)
+    : '';
 
   return (
     <PocketPop>
@@ -58,13 +127,13 @@ export default function GoalsScreen() {
         end={{ x: 0.9, y: 1 }}
         style={styles.heroCard}>
         <View style={styles.deco} />
-        <Text style={styles.heroLabel}>Free for wishes until salary</Text>
-        <Text style={styles.heroValue}>{fmtMoney(Math.max(0, free))}</Text>
+        <Text style={styles.heroLabel}>Free until payday</Text>
+        <Text style={styles.heroValue}>{fmtMoney(Math.max(0, plan.freeUntilPayday))}</Text>
         <View style={styles.heroChipRow}>
           <View style={styles.heroChip}>
             <CalendarDots size={15} color={colors.white} weight="fill" />
             <Text style={styles.heroChipText}>
-              Salary in {wishPlan.daysToSalary} day{wishPlan.daysToSalary === 1 ? '' : 's'}
+              Payday in {plan.daysToPayday} day{plan.daysToPayday === 1 ? '' : 's'}
             </Text>
           </View>
           {wishes.length > 0 && (
@@ -76,22 +145,189 @@ export default function GoalsScreen() {
             </View>
           )}
         </View>
-        {free < 0 && (
-          <Text style={styles.heroNote}>
-            You're {fmtMoney(-free)} over plan right now — go easy until payday and this
-            fund will refill.
-          </Text>
-        )}
+        <Text style={styles.heroNote}>
+          {plan.freeUntilPayday < 0
+            ? `You're ${fmtMoney(-plan.freeUntilPayday)} over plan right now — go easy until payday.`
+            : `${fmtMoney(wishPlan.freeForWishes)} of this can go to wishes — the other half stays protected for daily life.`}
+        </Text>
       </LinearGradient>
 
+      {/* ——— Savings challenge ——— */}
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Savings challenge</Text>
+      </View>
+
+      {lastResult && !challenge && (
+        <View style={styles.resultCard}>
+          <View style={[styles.iconTile, { backgroundColor: colors.greenBgSoft }]}>
+            <Trophy size={21} color={colors.greenDark} weight="fill" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.resultTitle}>
+              Last cycle: saved {fmtMoney(lastResult.saved)} of {fmtMoney(lastResult.target)}
+            </Text>
+            <Text style={styles.resultSub}>
+              {lastResult.saved >= lastResult.target
+                ? 'Challenge crushed — it’s all in your savings pot. 🎉'
+                : lastResult.saved > 0
+                  ? 'Every bit banked counts. Ready for another round?'
+                  : 'Didn’t stick this time — new cycle, fresh start.'}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {challenge ? (
+        <Pressable
+          style={styles.challengeCard}
+          onLongPress={() =>
+            confirmAction(
+              'Stop the challenge?',
+              challenge.mode === 'lock'
+                ? `${fmtMoney(challenge.target)} moves from the savings pot back to your balance.`
+                : 'The reserved amount goes back into your spendable money.',
+              cancelChallenge,
+            )
+          }>
+          <View style={styles.challengeHead}>
+            <View style={[styles.iconTile, { backgroundColor: colors.greenBgSoft }]}>
+              {challenge.mode === 'lock' ? (
+                <LockSimple size={21} color={colors.greenDark} weight="fill" />
+              ) : (
+                <ShieldCheck size={21} color={colors.greenDark} weight="fill" />
+              )}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.challengeTitle}>
+                Save {fmtMoney(challenge.target)} this cycle
+              </Text>
+              <Text style={styles.challengeSub}>
+                {challenge.mode === 'lock'
+                  ? 'Locked in your savings pot'
+                  : progress!.onTrack
+                    ? 'Fully protected — on track'
+                    : `${fmtMoney(progress!.protectedAmount)} of ${fmtMoney(challenge.target)} still protected`}
+              </Text>
+            </View>
+            <Text style={styles.challengePct}>{progress!.pct}%</Text>
+          </View>
+
+          <View style={styles.progTrack}>
+            <View
+              style={[
+                styles.progFill,
+                {
+                  width: `${progress!.pct}%`,
+                  backgroundColor: progress!.onTrack ? colors.green : colors.red,
+                },
+              ]}
+            />
+          </View>
+
+          <Text style={styles.challengeMsg}>“{challengeMessage}”</Text>
+
+          <View style={styles.strategyBox}>
+            <Text style={styles.strategyTitle}>Your strategy</Text>
+            <Text style={styles.strategyRow}>
+              · Spend at most {fmtMoney(plan.dailyBudget)}/day for the next {plan.daysToPayday}{' '}
+              day{plan.daysToPayday === 1 ? '' : 's'}
+            </Text>
+            {plan.reserved.bills > 0 && (
+              <Text style={styles.strategyRow}>
+                · Keep {fmtMoney(plan.reserved.bills)} untouched for unpaid bills
+              </Text>
+            )}
+            {plan.reserved.debt > 0 && (
+              <Text style={styles.strategyRow}>
+                · Keep {fmtMoney(plan.reserved.debt)} for this month’s debt payments
+              </Text>
+            )}
+            <Text style={styles.strategyRow}>
+              {challenge.mode === 'lock'
+                ? `· Your ${fmtMoney(challenge.target)} is already in the pot — nothing else to do`
+                : `· Stay under budget and ${fmtMoney(challenge.target)} moves to your savings pot on payday`}
+            </Text>
+          </View>
+          <Text style={styles.hint}>Hold to stop the challenge</Text>
+        </Pressable>
+      ) : (
+        <View style={styles.setupCard}>
+          <View style={styles.challengeHead}>
+            <View style={[styles.iconTile, { backgroundColor: colors.blueBgSoft }]}>
+              <PiggyBank size={21} color={colors.blue} weight="fill" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.challengeTitle}>How much will you save this cycle?</Text>
+              <Text style={styles.challengeSub}>
+                Pocket will plan your daily budget around it.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.targetRow}>
+            <TextInput
+              value={targetDraft ?? defaultTarget}
+              onChangeText={setTargetDraft}
+              keyboardType="numeric"
+              placeholder="500"
+              placeholderTextColor={colors.textMuted}
+              selectTextOnFocus
+              style={styles.targetInput}
+            />
+            <Text style={styles.targetCurrency}>{currencySymbol()}</Text>
+          </View>
+
+          <Pressable
+            style={[styles.modeRow, mode === 'reserve' && styles.modeRowActive]}
+            onPress={() => setMode('reserve')}>
+            <ShieldCheck
+              size={18}
+              color={mode === 'reserve' ? colors.green : colors.textMuted}
+              weight="fill"
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modeTitle}>Reserve & track</Text>
+              <Text style={styles.modeSub}>
+                Stays in your balance but protected — banked into savings on payday.
+              </Text>
+            </View>
+            <View style={[styles.radio, mode === 'reserve' && styles.radioActive]} />
+          </Pressable>
+          <Pressable
+            style={[styles.modeRow, mode === 'lock' && styles.modeRowActive]}
+            onPress={() => setMode('lock')}>
+            <LockSimple
+              size={18}
+              color={mode === 'lock' ? colors.green : colors.textMuted}
+              weight="fill"
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modeTitle}>Lock it away now</Text>
+              <Text style={styles.modeSub}>
+                Moves into the savings pot immediately — pay yourself first.
+              </Text>
+            </View>
+            <View style={[styles.radio, mode === 'lock' && styles.radioActive]} />
+          </Pressable>
+
+          <Pressable
+            disabled={!targetValid}
+            style={[styles.startBtn, !targetValid && { opacity: 0.5 }]}
+            onPress={() => targetValid && setChallenge(targetValue, mode)}>
+            <Text style={styles.startBtnText}>Start the challenge</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* ——— Salary day ——— */}
       <View style={styles.salaryCard}>
         <View style={[styles.iconTile, { backgroundColor: colors.blueBgSoft }]}>
           <CalendarDots size={21} color={colors.blue} weight="fill" />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.salaryTitle}>
-            Next salary {niceDate(wishPlan.nextSalaryDate)}
-            <Text style={styles.salaryDays}> · in {wishPlan.daysToSalary} day{wishPlan.daysToSalary === 1 ? '' : 's'}</Text>
+            Next salary {niceDate(plan.nextPaydayDate)}
+            <Text style={styles.salaryDays}> · in {plan.daysToPayday} day{plan.daysToPayday === 1 ? '' : 's'}</Text>
           </Text>
           <Text style={styles.salarySub}>Paid on day {settings.salaryDay} of each month</Text>
         </View>
@@ -105,11 +341,13 @@ export default function GoalsScreen() {
         </View>
       </View>
       <Text style={styles.hint}>
-        Reserved until then: bills {fmtMoney(wishPlan.reserved.bills)} · debt{' '}
-        {fmtMoney(wishPlan.reserved.debt)} · savings {fmtMoney(wishPlan.reserved.savings)} · daily
-        life {fmtMoney(wishPlan.reserved.daily)}
+        Reserved until payday: bills {fmtMoney(plan.reserved.bills)} · debt{' '}
+        {fmtMoney(plan.reserved.debt)}
+        {plan.reserved.challenge > 0 ? ` · challenge ${fmtMoney(plan.reserved.challenge)}` : ''} ·
+        daily life {fmtMoney(wishPlan.reserved.dailyLife)}
       </Text>
 
+      {/* ——— Wishlist ——— */}
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Wishlist</Text>
         <Pressable style={styles.addSmallBtn} onPress={() => router.push('/new-wish')}>
@@ -127,15 +365,12 @@ export default function GoalsScreen() {
       ) : (
         <View style={styles.wishList}>
           {wishes.map((w) => {
-            const leftover = free - w.price;
-            const ok = leftover >= 0;
+            const ok = w.price <= wishPlan.freeForWishes;
+            const stretch = !ok && w.price <= Math.max(0, wishPlan.freeUntilPayday);
             const funded =
-              w.price > 0 ? Math.max(0, Math.min(100, Math.round((free / w.price) * 100))) : 100;
-            // Trimming this much off each remaining day's budget covers the gap
-            // before payday; only suggest it when it leaves room to live on.
-            const perDay =
-              !ok && wishPlan.daysToSalary > 0 ? Math.ceil(-leftover / wishPlan.daysToSalary) : 0;
-            const canTrim = perDay > 0 && perDay < dailyBudget;
+              w.price > 0
+                ? Math.max(0, Math.min(100, Math.round((wishPlan.freeForWishes / w.price) * 100)))
+                : 100;
             return (
               <Pressable
                 key={w.id}
@@ -185,16 +420,18 @@ export default function GoalsScreen() {
                       { color: ok ? colors.greenDark : colors.redDark },
                     ]}>
                     {ok
-                      ? `You can buy this — ${fmtMoney(leftover)} still free until your salary`
-                      : `Short by ${fmtMoney(-leftover)} — easier after your salary in ${wishPlan.daysToSalary} day${wishPlan.daysToSalary === 1 ? '' : 's'}`}
+                      ? `You can buy this — ${fmtMoney(wishPlan.freeForWishes - w.price)} of wish money left over`
+                      : stretch
+                        ? 'Possible, but it would eat the money protected for daily life'
+                        : `Short by ${fmtMoney(w.price - wishPlan.freeForWishes)} — easier after payday in ${wishPlan.daysToSalary} day${wishPlan.daysToSalary === 1 ? '' : 's'}`}
                   </Text>
                 </View>
-                {canTrim && (
+                {stretch && (
                   <View style={styles.planRow}>
                     <Lightning size={14} color={colors.blue} weight="fill" />
                     <Text style={styles.planText}>
-                      Skip {fmtMoney(perDay)} of your daily budget until payday and it's yours
-                      before the salary even lands.
+                      Safer in {wishPlan.daysToSalary} day{wishPlan.daysToSalary === 1 ? '' : 's'}{' '}
+                      when your salary lands — or grab it now and live very lean until then.
                     </Text>
                   </View>
                 )}
@@ -205,10 +442,11 @@ export default function GoalsScreen() {
         </View>
       )}
 
+      {/* ——— Boosters ——— */}
       {transactions.length > 0 && (
         <>
           <View style={styles.sectionRow}>
-            <Text style={styles.sectionTitle}>Boost your wish fund</Text>
+            <Text style={styles.sectionTitle}>Boost your goals</Text>
           </View>
           <View style={styles.boostCard}>
             <View style={[styles.iconTile, { backgroundColor: colors.greenBgSoft }]}>
@@ -222,8 +460,8 @@ export default function GoalsScreen() {
               </Text>
               <Text style={styles.boostSub}>
                 {noSpend.bestStreak > 1 ? `Best streak: ${noSpend.bestStreak} days in a row. ` : ''}
-                Every day without spending leaves about {fmtMoney(dailyBudget)} extra in your
-                pocket for these wishes.
+                Every day without spending leaves about {fmtMoney(plan.dailyBudget)} extra for
+                your challenge and wishes.
               </Text>
             </View>
           </View>
@@ -312,6 +550,120 @@ const useStyles = themedStyles((colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  resultCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  resultTitle: { ...type.rowTitle, color: colors.textPrimary },
+  resultSub: { ...type.rowSubtitle, color: colors.textMuted, marginTop: 2, lineHeight: 17 },
+
+  challengeCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    padding: 16,
+  },
+  setupCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    padding: 16,
+  },
+  challengeHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  challengeTitle: { ...type.rowTitle, color: colors.textPrimary },
+  challengeSub: { ...type.rowSubtitle, color: colors.textMuted, marginTop: 1 },
+  challengePct: { fontFamily: fonts.extraBold, fontSize: 18, color: colors.textPrimary },
+  progTrack: {
+    height: 8,
+    borderRadius: 5,
+    backgroundColor: colors.track,
+    marginTop: 13,
+    overflow: 'hidden',
+  },
+  progFill: { height: '100%', borderRadius: 5 },
+  challengeMsg: {
+    fontFamily: fonts.bold,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    marginTop: 12,
+    fontStyle: 'italic' as const,
+  },
+  strategyBox: {
+    backgroundColor: colors.background,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 12,
+  },
+  strategyTitle: { ...type.smallLabel, color: colors.textMuted, marginBottom: 5 },
+  strategyRow: {
+    fontFamily: fonts.semiBold,
+    fontSize: 12,
+    lineHeight: 19,
+    color: colors.textSecondary,
+  },
+
+  targetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: 13,
+    backgroundColor: colors.background,
+    paddingHorizontal: 12,
+    marginTop: 13,
+  },
+  targetInput: {
+    flex: 1,
+    fontFamily: fonts.extraBold,
+    fontSize: 18,
+    color: colors.textPrimary,
+    paddingVertical: 10,
+    padding: 0,
+  },
+  targetCurrency: { ...type.smallLabel, color: colors.textMuted },
+  modeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    marginTop: 9,
+  },
+  modeRowActive: { borderColor: colors.green, backgroundColor: colors.greenBgSoft },
+  modeTitle: { fontFamily: fonts.extraBold, fontSize: 13, color: colors.textPrimary },
+  modeSub: { ...type.rowSubtitle, fontSize: 11, color: colors.textMuted, marginTop: 1 },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: colors.borderStrong,
+  },
+  radioActive: { borderColor: colors.green, backgroundColor: colors.green },
+  startBtn: {
+    backgroundColor: colors.green,
+    borderRadius: 14,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginTop: 13,
+  },
+  startBtnText: { fontFamily: fonts.extraBold, fontSize: 14, color: colors.white },
 
   salaryCard: {
     backgroundColor: colors.card,

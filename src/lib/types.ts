@@ -81,12 +81,41 @@ export interface Wish {
   createdAt: string;
 }
 
+/**
+ * How a monthly savings challenge holds its money:
+ * - 'reserve': the target stays in the balance but safe-to-spend excludes it;
+ *   whatever survives until the next payday is banked into the savings pot.
+ * - 'lock': the target moves into the savings pot the moment the challenge
+ *   starts (pay yourself first).
+ */
+export type ChallengeMode = 'reserve' | 'lock';
+
+/** One pay-cycle savings challenge ("save X this month"). */
+export interface SavingsChallenge {
+  /** Pay cycle (YYYY-MM of the payday that opened it) this challenge runs in. */
+  cycle: string;
+  target: number;
+  mode: ChallengeMode;
+  /** ISO date, YYYY-MM-DD */
+  createdAt: string;
+}
+
+/** Outcome of the last finished challenge — shown on Goals until a new one starts. */
+export interface ChallengeResult {
+  cycle: string;
+  target: number;
+  /** What actually made it into the savings pot. */
+  saved: number;
+}
+
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 export interface UserSettings {
   userName: string;
   startBalance: number;
+  /** Expected monthly salary — prefills the payday confirmation, never counted until confirmed. */
   salary: number;
+  /** Default monthly savings target — prefills each cycle's challenge. */
   savingsGoal: number;
   privacyMode: boolean;
   /** Day of the month (1–31) the salary arrives — drives wish affordability. */

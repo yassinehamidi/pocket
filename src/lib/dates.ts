@@ -54,6 +54,22 @@ export function billCycleISO(dueDay: number): string {
 }
 
 /**
+ * Current pay cycle (YYYY-MM): the month of the most recent payday. Before
+ * the pay day the cycle is still last month's — same rule as bill cycles.
+ */
+export function salaryCycleISO(salaryDay: number): string {
+  return billCycleISO(salaryDay);
+}
+
+/** ISO date of the most recent payday (the one that opened the current cycle). */
+export function lastSalaryISO(salaryDay: number): string {
+  const cycle = salaryCycleISO(salaryDay);
+  const [y, m] = cycle.split('-').map(Number);
+  const day = Math.min(Math.max(1, salaryDay), new Date(y, m, 0).getDate());
+  return `${cycle}-${`${day}`.padStart(2, '0')}`;
+}
+
+/**
  * ISO date of the next salary for a pay day-of-month. If today is on or past
  * the pay day, the next one is next month's. Pay days beyond a month's length
  * clamp to its last day (e.g. day 31 in February).

@@ -8,8 +8,8 @@ import { niceDate, todayISO } from '@/lib/dates';
 import { fmtMoney } from '@/lib/format';
 import {
   DaySegment,
-  getDailyBudget,
   getDayHistory,
+  getSpendPlan,
   getTodayCategorySegments,
   getTodaySpent,
   getTodayTransactions,
@@ -77,9 +77,18 @@ export function DailySection() {
   const bills = useFinanceStore((s) => s.bills);
   const debts = useFinanceStore((s) => s.debts);
   const settings = useFinanceStore((s) => s.settings);
+  const savings = useFinanceStore((s) => s.savings);
+  const challenge = useFinanceStore((s) => s.challenge);
 
   const categories = useFinanceStore((s) => s.categories);
-  const dailyBudget = getDailyBudget(settings, bills, debts);
+  const dailyBudget = getSpendPlan(
+    transactions,
+    settings,
+    bills,
+    debts,
+    savings,
+    challenge,
+  ).dailyBudget;
   const todaySpent = getTodaySpent(transactions);
   const todayTx = getTodayTransactions(transactions);
   const segments = getTodayCategorySegments(transactions, categories);
