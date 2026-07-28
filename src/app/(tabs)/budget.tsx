@@ -205,38 +205,39 @@ export default function BudgetScreen() {
             {bills.map((b) => {
               const paid = isBillPaid(b);
               return (
-                <Pressable
-                  key={b.id}
-                  style={styles.billRow}
-                  onPress={() => toggleBillPaid(b.id)}
-                  onLongPress={() =>
-                    confirmAction('Remove bill?', `Delete "${b.name}" from your fixed bills.`, () =>
-                      removeBill(b.id),
-                    )
-                  }>
-                  <View style={styles.billName}>
+                <View key={b.id} style={styles.billRow}>
+                  <Pressable
+                    style={styles.billName}
+                    onPress={() => toggleBillPaid(b.id)}
+                    onLongPress={() =>
+                      confirmAction(
+                        'Remove bill?',
+                        `Delete "${b.name}" from your fixed bills.`,
+                        () => removeBill(b.id),
+                      )
+                    }>
                     {paid ? (
                       <CheckCircle size={16} color={colors.green} weight="fill" />
                     ) : (
                       <PhosphorIcon name={b.icon} size={16} color={colors.textMuted} />
                     )}
                     <Text style={[styles.billNameText, paid && styles.billNamePaid]}>
-                      {b.name}{' '}
+                      {b.name}
                     </Text>
-                    <Pressable
-                      hitSlop={8}
-                      onLongPress={() => setDayPicker({ kind: 'bill', id: b.id, day: b.dueDay })}>
-                      <Text style={styles.billDue}>· day {b.dueDay}</Text>
-                    </Pressable>
-                  </View>
+                  </Pressable>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() => setDayPicker({ kind: 'bill', id: b.id, day: b.dueDay })}>
+                    <Text style={styles.billDue}>day {b.dueDay}</Text>
+                  </Pressable>
                   <Text style={[styles.billAmount, paid && styles.billNamePaid]}>
                     {fmtMoney(b.amount)}
                   </Text>
-                </Pressable>
+                </View>
               );
             })}
             <Text style={styles.hint}>
-              Tap to pay · hold the row to remove · hold “day X” to change the due date
+              Tap the name to pay · hold to remove · tap “day X” to change it
             </Text>
           </View>
         )}
@@ -261,40 +262,40 @@ export default function BudgetScreen() {
           const pctLeft =
             d.originalTotal > 0 ? Math.round((d.total / d.originalTotal) * 100) : 100;
           return (
-            <Pressable
-              key={d.id}
-              style={styles.debtCard}
-              onPress={() =>
-                d.total > 0 &&
-                confirmAction(
-                  'Record payment?',
-                  `Reduce "${d.name}" by ${fmtMoney(d.monthly)} (this month's payment).`,
-                  () => recordDebtPayment(d.id),
-                )
-              }
-              onLongPress={() =>
-                confirmAction('Remove debt?', `Delete "${d.name}" from your debts.`, () =>
-                  removeDebt(d.id),
-                )
-              }>
-              <View style={styles.debtRow}>
-                <View style={styles.debtIconTile}>
-                  <PhosphorIcon name={d.icon} size={21} color={colors.redDark} weight="fill" />
+            <View key={d.id} style={styles.debtCard}>
+              <Pressable
+                onPress={() =>
+                  d.total > 0 &&
+                  confirmAction(
+                    'Record payment?',
+                    `Reduce "${d.name}" by ${fmtMoney(d.monthly)} (this month's payment).`,
+                    () => recordDebtPayment(d.id),
+                  )
+                }
+                onLongPress={() =>
+                  confirmAction('Remove debt?', `Delete "${d.name}" from your debts.`, () =>
+                    removeDebt(d.id),
+                  )
+                }>
+                <View style={styles.debtRow}>
+                  <View style={styles.debtIconTile}>
+                    <PhosphorIcon name={d.icon} size={21} color={colors.redDark} weight="fill" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.debtName}>{d.name}</Text>
+                    <Text style={styles.debtRemaining}>
+                      {d.total > 0 ? `Remaining ${fmtMoney(d.total)}` : 'Paid off 🎉'}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.debtMonthly}>{fmtMoney(d.monthly)}</Text>
+                    <Text style={styles.debtPerMonth}>/ month</Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.debtName}>{d.name}</Text>
-                  <Text style={styles.debtRemaining}>
-                    {d.total > 0 ? `Remaining ${fmtMoney(d.total)}` : 'Paid off 🎉'}
-                  </Text>
+                <View style={styles.debtTrack}>
+                  <View style={[styles.debtFill, { width: `${100 - pctLeft}%` }]} />
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.debtMonthly}>{fmtMoney(d.monthly)}</Text>
-                  <Text style={styles.debtPerMonth}>/ month</Text>
-                </View>
-              </View>
-              <View style={styles.debtTrack}>
-                <View style={[styles.debtFill, { width: `${100 - pctLeft}%` }]} />
-              </View>
+              </Pressable>
               <View style={styles.debtFooter}>
                 <CalendarDots size={15} color={colors.textBody} />
                 <Text style={[styles.debtMonthsLeft, { flex: 1 }]}>
@@ -305,20 +306,18 @@ export default function BudgetScreen() {
                 <Pressable
                   hitSlop={8}
                   style={styles.dueDayChip}
-                  onLongPress={() =>
-                    setDayPicker({ kind: 'debt', id: d.id, day: d.dueDay ?? 1 })
-                  }>
+                  onPress={() => setDayPicker({ kind: 'debt', id: d.id, day: d.dueDay ?? 1 })}>
                   <Text style={styles.dueDayChipText}>
                     {d.dueDay ? `Due day ${d.dueDay}` : 'Set due day'}
                   </Text>
                 </Pressable>
               </View>
-            </Pressable>
+            </View>
           );
         })}
         {debts.length > 0 && (
           <Text style={styles.hint}>
-            Tap to record a payment · hold the card to remove · hold “due day” to set it
+            Tap to record a payment · hold to remove · tap “due day” to set it
           </Text>
         )}
       </View>
@@ -527,8 +526,8 @@ const useStyles = themedStyles((colors) => StyleSheet.create({
     marginHorizontal: 4,
   },
   billsList: { gap: 9, marginTop: 12 },
-  billRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  billName: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  billRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  billName: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
   billNameText: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.textSecondary },
   billNamePaid: { color: colors.textMuted, textDecorationLine: 'line-through' },
   billDue: { fontFamily: fonts.semiBold, fontSize: 11, color: colors.textMuted },

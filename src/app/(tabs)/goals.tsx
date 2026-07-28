@@ -326,27 +326,33 @@ export default function GoalsScreen() {
       )}
 
       {/* ——— Salary day ——— */}
-      <Pressable style={styles.salaryCard} onLongPress={() => setSalaryDayPickerOpen(true)}>
+      <View style={styles.salaryCard}>
         <View style={[styles.iconTile, { backgroundColor: colors.blueBgSoft }]}>
           <CalendarDots size={21} color={colors.blue} weight="fill" />
         </View>
-        <View style={{ flex: 1 }}>
+        <Pressable style={{ flex: 1 }} onPress={() => setSalaryDayPickerOpen(true)}>
           <Text style={styles.salaryTitle}>
             Next salary {niceDate(plan.nextPaydayDate)}
             <Text style={styles.salaryDays}> · in {plan.daysToPayday} day{plan.daysToPayday === 1 ? '' : 's'}</Text>
           </Text>
-          <Text style={styles.salarySub}>Paid on day {settings.salaryDay} of each month</Text>
-        </View>
+          <Text style={styles.salarySub}>Paid on day {settings.salaryDay} · tap to change</Text>
+        </Pressable>
         <View style={styles.stepperBtns}>
-          <Pressable style={styles.minusBtn} onPress={() => setSalaryDay(settings.salaryDay - 1)}>
+          <Pressable
+            style={styles.minusBtn}
+            hitSlop={8}
+            onPress={() => setSalaryDay(settings.salaryDay - 1)}>
             <Minus size={16} color={colors.textSecondary} weight="bold" />
           </Pressable>
-          <Pressable style={styles.plusBtn} onPress={() => setSalaryDay(settings.salaryDay + 1)}>
+          <Pressable
+            style={styles.plusBtn}
+            hitSlop={8}
+            onPress={() => setSalaryDay(settings.salaryDay + 1)}>
             <Plus size={16} color={colors.white} weight="bold" />
           </Pressable>
         </View>
-      </Pressable>
-      <Text style={styles.hint}>Hold the card to pick the exact salary day</Text>
+      </View>
+      <Text style={styles.hint}>Tap the date to pick the exact salary day</Text>
 
       <Pressable style={styles.gotPaidBtn} onPress={() => setGotPaidOpen(true)}>
         <Confetti size={16} color={colors.greenDark} weight="fill" />
