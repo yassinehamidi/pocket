@@ -5,7 +5,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { DEFAULT_CATEGORIES } from '@/data/categories';
 import { DEFAULT_CURRENCY, DEFAULT_REGION, getRegion } from '@/data/currencies';
 import { seedBills, seedDebts, seedSavings, seedSettings, seedTransactions, seedWishes } from '@/data/seed';
-import { billCycleISO, lastSalaryISO, salaryCycleISO, todayISO } from '@/lib/dates';
+import { billCycleISO, salaryCycleISO, todayISO } from '@/lib/dates';
 import { setActiveCurrency } from '@/lib/format';
 import { getBalance } from '@/lib/selectors';
 import {
@@ -75,14 +75,24 @@ interface FinanceState {
   }) => void;
   addBill: (bill: { name: string; amount: number; icon: string; dueDay: number }) => void;
   removeBill: (id: string) => void;
+  /** Changes a bill's due day (1–31) after it's been created. */
+  setBillDueDay: (id: string, day: number) => void;
   /**
    * Marks a bill paid for its current cycle (or unpaid if already marked).
    * Paying records an expense transaction so the balance drops; unpaying
    * removes that transaction again.
    */
   toggleBillPaid: (id: string) => void;
-  addDebt: (debt: { name: string; total: number; monthly: number; icon: string }) => void;
+  addDebt: (debt: {
+    name: string;
+    total: number;
+    monthly: number;
+    icon: string;
+    dueDay?: number;
+  }) => void;
   removeDebt: (id: string) => void;
+  /** Sets or changes a debt's payment due day (1–31). */
+  setDebtDueDay: (id: string, day: number) => void;
   /** Reduces a debt's remaining balance by one monthly payment. */
   recordDebtPayment: (id: string) => void;
   addWish: (wish: { name: string; price: number }) => void;
@@ -98,6 +108,12 @@ interface FinanceState {
   confirmSalary: (amount: number) => void;
   /** Dismisses this cycle's salary prompt without adding income. */
   skipSalary: () => void;
+  /**
+   * Manual "I got paid today" — always adds the income dated today,
+   * independent of the automatic payday card. Covers salary that arrives
+   * early, late, or off-schedule; never silently no-ops.
+   */
+  logSalaryToday: (amount: number) => void;
   /**
    * Starts this cycle's savings challenge. 'reserve' keeps the target in the
    * balance but protected; 'lock' moves it into the savings pot immediately.
@@ -198,6 +214,13 @@ export const useFinanceStore = create<FinanceState>()(
       removeBill: (id) =>
         set((s) => ({ bills: s.bills.filter((b) => b.id !== id) })),
 
+      setBillDueDay: (id, day) =>
+        set((s) => ({
+          bills: s.bills.map((b) =>
+            b.id === id ? { ...b, dueDay: Math.min(31, Math.max(1, Math.round(day) || 1)) } : b,
+          ),
+        })),
+
       toggleBillPaid: (id) =>
         set((s) => {
           const bill = s.bills.find((b) => b.id === id);
@@ -242,6 +265,13 @@ export const useFinanceStore = create<FinanceState>()(
 
       removeDebt: (id) =>
         set((s) => ({ debts: s.debts.filter((d) => d.id !== id) })),
+
+      setDebtDueDay: (id, day) =>
+        set((s) => ({
+          debts: s.debts.map((d) =>
+            d.id === id ? { ...d, dueDay: Math.min(31, Math.max(1, Math.round(day) || 1)) } : d,
+          ),
+        })),
 
       recordDebtPayment: (id) =>
         set((s) => ({
@@ -322,8 +352,7 @@ export const useFinanceStore = create<FinanceState>()(
                 amount,
                 category: 'salary',
                 reason: 'Salary',
-                // Dated on the payday itself, even if confirmed a few days late.
-                date: lastSalaryISO(s.settings.salaryDay),
+                date: todayISO(),
               },
               ...s.transactions,
             ],
@@ -335,6 +364,33 @@ export const useFinanceStore = create<FinanceState>()(
           ...settleChallenge(s),
           skippedSalaryCycle: salaryCycleISO(s.settings.salaryDay),
         })),
+
+      logSalaryToday: (amount) =>
+        set((s) => {
+          if (amount <= 0) return {};
+          const cycle = salaryCycleISO(s.settings.salaryDay);
+          const cycleConfirmed = s.transactions.some((t) => t.id === `salary-${cycle}`);
+          // First confirmation this cycle also suppresses the automatic
+          // payday card and settles a leftover challenge, same as
+          // confirmSalary; a second manual log (e.g. an off-schedule bonus
+          // or an early extra payment) always goes through as its own entry
+          // instead of silently no-opping.
+          const settled = cycleConfirmed ? {} : settleChallenge(s);
+          return {
+            ...settled,
+            transactions: [
+              {
+                id: cycleConfirmed ? `salary-manual-${Date.now()}` : `salary-${cycle}`,
+                type: 'in' as const,
+                amount,
+                category: 'salary',
+                reason: 'Salary',
+                date: todayISO(),
+              },
+              ...s.transactions,
+            ],
+          };
+        }),
 
       setChallenge: (target, mode) =>
         set((s) => {

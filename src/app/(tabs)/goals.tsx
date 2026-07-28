@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
   CalendarDots,
+  Confetti,
   Leaf,
   Lightning,
   LockSimple,
@@ -17,6 +18,8 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DayPickerSheet } from '@/components/DayPickerSheet';
+import { GotPaidSheet } from '@/components/GotPaidSheet';
 import { PocketPop } from '@/components/PocketPop';
 import { useTabBarClearance } from '@/components/TabBar';
 import { confirmAction } from '@/lib/confirm';
@@ -95,6 +98,9 @@ export default function GoalsScreen() {
   const progress = challenge
     ? getChallengeProgress(transactions, settings, bills, debts, savings, challenge)
     : null;
+
+  const [salaryDayPickerOpen, setSalaryDayPickerOpen] = useState(false);
+  const [gotPaidOpen, setGotPaidOpen] = useState(false);
 
   // Challenge setup form state.
   const [targetDraft, setTargetDraft] = useState<string | null>(null);
@@ -320,7 +326,7 @@ export default function GoalsScreen() {
       )}
 
       {/* ——— Salary day ——— */}
-      <View style={styles.salaryCard}>
+      <Pressable style={styles.salaryCard} onLongPress={() => setSalaryDayPickerOpen(true)}>
         <View style={[styles.iconTile, { backgroundColor: colors.blueBgSoft }]}>
           <CalendarDots size={21} color={colors.blue} weight="fill" />
         </View>
@@ -339,8 +345,15 @@ export default function GoalsScreen() {
             <Plus size={16} color={colors.white} weight="bold" />
           </Pressable>
         </View>
-      </View>
-      <Text style={styles.hint}>
+      </Pressable>
+      <Text style={styles.hint}>Hold the card to pick the exact salary day</Text>
+
+      <Pressable style={styles.gotPaidBtn} onPress={() => setGotPaidOpen(true)}>
+        <Confetti size={16} color={colors.greenDark} weight="fill" />
+        <Text style={styles.gotPaidText}>Got paid today? Add it now</Text>
+      </Pressable>
+
+      <Text style={[styles.hint, { marginTop: 12 }]}>
         Reserved until payday: bills {fmtMoney(plan.reserved.bills)} · debt{' '}
         {fmtMoney(plan.reserved.debt)}
         {plan.reserved.challenge > 0 ? ` · challenge ${fmtMoney(plan.reserved.challenge)}` : ''} ·
@@ -467,6 +480,16 @@ export default function GoalsScreen() {
           </View>
         </>
       )}
+
+      <DayPickerSheet
+        visible={salaryDayPickerOpen}
+        onClose={() => setSalaryDayPickerOpen(false)}
+        title="Salary day"
+        subtitle="Pick the day of the month you get paid"
+        value={settings.salaryDay}
+        onSelect={setSalaryDay}
+      />
+      <GotPaidSheet visible={gotPaidOpen} onClose={() => setGotPaidOpen(false)} />
     </ScrollView>
     </PocketPop>
   );
@@ -681,6 +704,18 @@ const useStyles = themedStyles((colors) => StyleSheet.create({
   salaryTitle: { ...type.rowTitle, color: colors.textPrimary },
   salaryDays: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.textMuted },
   salarySub: { ...type.rowSubtitle, color: colors.textMuted, marginTop: 1 },
+
+  gotPaidBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.greenBgSoft,
+    borderRadius: 16,
+    paddingVertical: 12,
+    marginTop: 10,
+  },
+  gotPaidText: { fontFamily: fonts.extraBold, fontSize: 13, color: colors.greenDark },
 
   sectionRow: {
     flexDirection: 'row',

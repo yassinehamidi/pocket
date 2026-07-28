@@ -59,6 +59,8 @@ export interface Debt {
   originalTotal: number;
   /** Recorded payments, newest first — drives the monthly history. */
   payments: DebtPayment[];
+  /** Day of the month (1–31) the payment is due, if the user set one. */
+  dueDay?: number;
 }
 
 /**

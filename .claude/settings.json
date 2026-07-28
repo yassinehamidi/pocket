@@ -7,7 +7,9 @@
       "Bash(node -e \"const p=require\\('./node_modules/expo/package.json'\\); console.log\\(JSON.stringify\\(p.exports ? Object.keys\\(p.exports\\) : 'no exports field'\\)\\)\")",
       "Bash(npx tsc *)",
       "Bash(npx expo *)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8081/)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8081/)",
+      "Bash(curl -s -o /tmp/bundle2.js -w \"%{http_code}\" \"http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=src%2Fapp&transform.reactCompiler=true\")",
+      "Read(//tmp/**)"
     ]
   },
   "enabledPlugins": {

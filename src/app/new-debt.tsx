@@ -34,6 +34,7 @@ export default function NewDebtScreen() {
   const [name, setName] = useState('');
   const [total, setTotal] = useState('');
   const [monthly, setMonthly] = useState('');
+  const [dueDay, setDueDay] = useState('');
   const [icon, setIcon] = useState<string>('credit-card');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -46,13 +47,17 @@ export default function NewDebtScreen() {
 
   const save = () => {
     const next: Record<string, string> = {};
+    const day = dueDay.trim() ? parseInt(dueDay, 10) : undefined;
     if (!name.trim()) next.name = 'Give the debt a name';
     if (isNaN(totalValue) || totalValue <= 0) next.total = 'Enter the remaining amount';
     if (isNaN(monthlyValue) || monthlyValue <= 0) next.monthly = 'Enter your monthly payment';
+    if (day !== undefined && (isNaN(day) || day < 1 || day > 31)) {
+      next.dueDay = 'Pick a day between 1 and 31';
+    }
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    addDebt({ name: name.trim(), total: totalValue, monthly: monthlyValue, icon });
+    addDebt({ name: name.trim(), total: totalValue, monthly: monthlyValue, icon, dueDay: day });
     dismissScreen(router);
   };
 
@@ -102,6 +107,15 @@ export default function NewDebtScreen() {
             keyboardType="numeric"
             icon={<CalendarDots size={18} color={colors.textMuted} />}
             error={errors.monthly}
+          />
+          <FormField
+            label="Due day of the month (optional)"
+            value={dueDay}
+            onChangeText={setDueDay}
+            placeholder="e.g. 5"
+            keyboardType="numeric"
+            icon={<CalendarDots size={18} color={colors.textMuted} />}
+            error={errors.dueDay}
           />
 
           {monthsLeft !== null && (

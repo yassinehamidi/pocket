@@ -14,6 +14,7 @@ import { ReactNode, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DayPickerSheet } from '@/components/DayPickerSheet';
 import { PhosphorIcon } from '@/components/PhosphorIcon';
 import { PocketPop } from '@/components/PocketPop';
 import { useTabBarClearance } from '@/components/TabBar';
@@ -115,6 +116,8 @@ export default function BudgetScreen() {
   const removeBill = useFinanceStore((s) => s.removeBill);
   const removeDebt = useFinanceStore((s) => s.removeDebt);
   const toggleBillPaid = useFinanceStore((s) => s.toggleBillPaid);
+  const setBillDueDay = useFinanceStore((s) => s.setBillDueDay);
+  const setDebtDueDay = useFinanceStore((s) => s.setDebtDueDay);
   const recordDebtPayment = useFinanceStore((s) => s.recordDebtPayment);
   const transactions = useFinanceStore((s) => s.transactions);
   const savings = useFinanceStore((s) => s.savings);
@@ -123,6 +126,11 @@ export default function BudgetScreen() {
   const plan = getSpendPlan(transactions, settings, bills, debts, savings, challenge);
   const totalBills = getTotalBills(bills);
   const monthHistory = getBudgetMonthHistory(transactions, debts);
+
+  // Which due-day picker is open, if any — shared by bills and debts.
+  const [dayPicker, setDayPicker] = useState<
+    { kind: 'bill' | 'debt'; id: string; day: number } | null
+  >(null);
 
   return (
     <PocketPop>
@@ -213,8 +221,13 @@ export default function BudgetScreen() {
                       <PhosphorIcon name={b.icon} size={16} color={colors.textMuted} />
                     )}
                     <Text style={[styles.billNameText, paid && styles.billNamePaid]}>
-                      {b.name} <Text style={styles.billDue}>· day {b.dueDay}</Text>
+                      {b.name}{' '}
                     </Text>
+                    <Pressable
+                      hitSlop={8}
+                      onLongPress={() => setDayPicker({ kind: 'bill', id: b.id, day: b.dueDay })}>
+                      <Text style={styles.billDue}>· day {b.dueDay}</Text>
+                    </Pressable>
                   </View>
                   <Text style={[styles.billAmount, paid && styles.billNamePaid]}>
                     {fmtMoney(b.amount)}
@@ -223,7 +236,7 @@ export default function BudgetScreen() {
               );
             })}
             <Text style={styles.hint}>
-              Tap a bill to pay it (comes off your balance) · hold to remove
+              Tap to pay · hold the row to remove · hold “day X” to change the due date
             </Text>
           </View>
         )}
@@ -284,17 +297,29 @@ export default function BudgetScreen() {
               </View>
               <View style={styles.debtFooter}>
                 <CalendarDots size={15} color={colors.textBody} />
-                <Text style={styles.debtMonthsLeft}>
+                <Text style={[styles.debtMonthsLeft, { flex: 1 }]}>
                   {d.total > 0
                     ? `${d.monthsLeft} months left · ${pctLeft}% to go`
                     : `was ${fmtMoney(d.originalTotal)}`}
                 </Text>
+                <Pressable
+                  hitSlop={8}
+                  style={styles.dueDayChip}
+                  onLongPress={() =>
+                    setDayPicker({ kind: 'debt', id: d.id, day: d.dueDay ?? 1 })
+                  }>
+                  <Text style={styles.dueDayChipText}>
+                    {d.dueDay ? `Due day ${d.dueDay}` : 'Set due day'}
+                  </Text>
+                </Pressable>
               </View>
             </Pressable>
           );
         })}
         {debts.length > 0 && (
-          <Text style={styles.hint}>Tap a debt to record a payment · hold to remove</Text>
+          <Text style={styles.hint}>
+            Tap to record a payment · hold the card to remove · hold “due day” to set it
+          </Text>
         )}
       </View>
 
@@ -338,6 +363,19 @@ export default function BudgetScreen() {
           })}
         </View>
       )}
+
+      <DayPickerSheet
+        visible={dayPicker !== null}
+        onClose={() => setDayPicker(null)}
+        title={dayPicker?.kind === 'bill' ? 'Bill due day' : 'Debt due day'}
+        subtitle="Pick the day of the month it's due"
+        value={dayPicker?.day ?? 1}
+        onSelect={(day) => {
+          if (!dayPicker) return;
+          if (dayPicker.kind === 'bill') setBillDueDay(dayPicker.id, day);
+          else setDebtDueDay(dayPicker.id, day);
+        }}
+      />
     </ScrollView>
     </PocketPop>
   );
@@ -554,4 +592,13 @@ const useStyles = themedStyles((colors) => StyleSheet.create({
     borderTopColor: colors.divider,
   },
   debtMonthsLeft: { ...type.smallLabel, color: colors.textBody },
+  dueDayChip: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+  },
+  dueDayChipText: { fontFamily: fonts.extraBold, fontSize: 10.5, color: colors.textMuted },
 }));
